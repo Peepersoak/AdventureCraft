@@ -27,6 +27,7 @@ public final class AdventureCraftCore extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        //
     }
 
     public static AdventureCraftCore getInstance() {

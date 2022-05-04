@@ -1,7 +1,5 @@
 package com.peepersoak.adventurecraftcore.combat.levelmobs;
 
-import com.peepersoak.adventurecraftcore.AdventureCraftCore;
-import com.peepersoak.adventurecraftcore.utils.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.LivingEntity;
@@ -19,10 +17,9 @@ public class Nightmare extends BukkitRunnable {
     @Override
     public void run() {
         if (world == null) {
-            AdventureCraftCore.getInstance().getLogger().warning(Utils.color("&cNightmare is Disable"));
-            this.cancel();
             return;
         }
+
         long time = world.getTime();
         if (time < 12300 || time > 23850) return;
         List<LivingEntity> mobs = world.getLivingEntities();
