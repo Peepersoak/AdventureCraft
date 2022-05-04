@@ -1,0 +1,7 @@
+name: AdventureCraftCore
+version: ${project.version}
+main: com.peepersoak.adventurecraftcore.AdventureCraftCore
+api-version: 1.18
+authors: [ Peepersoak ]
+description: Core Plugin of AdventureCraft Server
+website: www.peepersoak.com

@@ -1,0 +1,11 @@
+# AdventureCraft Core Plugin
+
+# Mob Setting
+# This distance will determine the level of the mob, >250 = Normal mob no level. <250 = Level 1, <500 = level 2 etc.
+Distance_Threshold: 250
+Health_Multiplier: 15
+Damage_Multiplier: 5
+# Boss mobs attribute will be multiplied further by this amount.
+Boss_Multiplier: 10
+Max_Health: 2048
+Max_Damage: 2048
