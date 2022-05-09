@@ -4,7 +4,7 @@ import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.combat.events.CreeperEvents;
 import com.peepersoak.adventurecraftcore.combat.events.SkeletonEvent;
 import com.peepersoak.adventurecraftcore.combat.events.ZombieEvents;
-import com.peepersoak.adventurecraftcore.modelengine.SampleClass;
+import com.peepersoak.adventurecraftcore.items.wards.WardEvents;
 import com.peepersoak.adventurecraftcore.world.DeathLocation;
 import com.peepersoak.adventurecraftcore.world.DropItem;
 import com.peepersoak.adventurecraftcore.world.WorldEvents;
@@ -21,6 +21,6 @@ public class EventHandler {
         pm.registerEvents(new DeathLocation(), instance);
         pm.registerEvents(new DropItem(), instance);
 
-        pm.registerEvents(new SampleClass(), instance);
+        pm.registerEvents(new WardEvents(), instance);
     }
 }
