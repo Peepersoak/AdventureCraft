@@ -1,0 +1,16 @@
+Worlds:
+  - world
+
+Drop_Chance:
+  Tipped_Arrow: 5
+  Dungeon_Key: 1
+  Scroll: 5
+  Normal: 15
+  Custom: 10
+  Skill: 5
+
+Chest_Book: 8
+Chest_Scroll: 10
+Chest_Scroll_Max: 5
+Chest_Arrow: 10
+Chest_Arrow_Max: 5

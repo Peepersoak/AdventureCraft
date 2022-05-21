@@ -14,4 +14,5 @@ public class StringPath {
     public static NamespacedKey CUSTOM_SCROLL = new NamespacedKey(AdventureCraftCore.getInstance(), "CustomScroll");
     public static NamespacedKey CUSTOM_WARD = new NamespacedKey(AdventureCraftCore.getInstance(), "CustomWard");
 
+
 }

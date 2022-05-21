@@ -1,6 +1,7 @@
 package com.peepersoak.adventurecraftcore.utils;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
+import com.peepersoak.adventurecraftcore.Sample;
 import com.peepersoak.adventurecraftcore.combat.events.CreeperEvents;
 import com.peepersoak.adventurecraftcore.combat.events.SkeletonEvent;
 import com.peepersoak.adventurecraftcore.combat.events.ZombieEvents;
@@ -22,5 +23,7 @@ public class EventHandler {
         pm.registerEvents(new DropItem(), instance);
 
         pm.registerEvents(new WardEvents(), instance);
+
+        pm.registerEvents(new Sample(), instance);
     }
 }
