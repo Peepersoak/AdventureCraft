@@ -13,7 +13,7 @@ import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.monster.Zombie;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_18_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -32,10 +32,15 @@ public class BoomerZombie extends Zombie {
         this.setAggressive(true);
         this.setCanBreakDoors(true);
         this.setDropChance(EquipmentSlot.CHEST, 0.0F);
+        this.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
+        this.setDropChance(EquipmentSlot.OFFHAND, 0.0F);
 
         LivingEntity zombie = (LivingEntity) this.getBukkitEntity();
         Utils.getPDC(zombie).set(StringPath.CUSTOM_ZOMBIE, PersistentDataType.STRING, ZombieType.BOOMER_ZOMBIE);
+
         Objects.requireNonNull(zombie.getEquipment()).setChestplate(getBombChestplate());
+        zombie.getEquipment().setItemInMainHand(new ItemStack(Material.TNT));
+        zombie.getEquipment().setItemInOffHand(new ItemStack(Material.TNT));
 
         new MobFactory(zombie);
     }
@@ -58,7 +63,7 @@ public class BoomerZombie extends Zombie {
     }
 
     private ItemStack getBombChestplate() {
-        ItemStack bomb = new ItemStack(Material.IRON_CHESTPLATE);
+        ItemStack bomb = new ItemStack(Material.GOLDEN_CHESTPLATE);
         ItemMeta meta = bomb.getItemMeta();
         if (meta == null) return null;
         meta.setDisplayName("Boombie Chestplate");

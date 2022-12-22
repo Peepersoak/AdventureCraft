@@ -9,3 +9,20 @@ Damage_Multiplier: 5
 Boss_Multiplier: 10
 Max_Health: 2048
 Max_Damage: 2048
+
+Worlds:
+  - world
+
+Drop_Chance:
+  Tipped_Arrow: 5
+  Dungeon_Key: 1
+  Scroll: 5
+  Normal: 15
+  Custom: 100
+  Skill: 5
+
+Chest_Book: 8
+Chest_Scroll: 10
+Chest_Scroll_Max: 5
+Chest_Arrow: 10
+Chest_Arrow_Max: 5

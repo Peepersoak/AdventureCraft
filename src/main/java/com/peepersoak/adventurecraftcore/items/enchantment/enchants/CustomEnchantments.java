@@ -7,6 +7,6 @@ public enum CustomEnchantments {
     HEALTH_BOOST,
     LAST_RESORT,
     LIFE_STEAL,
-    REJUVINATION,
+    REJUVENATION,
     SOUL_BOUND
 }

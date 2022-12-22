@@ -12,7 +12,11 @@ public class CreeperEvents implements Listener {
     public void onCreeperDamage(EntityDamageByEntityEvent e) {
         if (e.getEntity() instanceof Creeper creeper) {
             if (e.getDamage() > creeper.getHealth()) {
-                if (Utils.getRandom(100) < 25) {
+                if (Utils.getRandom(100) < 35) {
+                    creeper.explode();
+                }
+            } else {
+                if (Utils.getRandom(100) < 5) {
                     creeper.explode();
                 }
             }

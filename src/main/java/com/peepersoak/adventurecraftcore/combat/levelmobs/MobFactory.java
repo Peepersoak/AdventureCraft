@@ -30,14 +30,31 @@ public class MobFactory {
 
         setBaby();
         setLevel();
-        setDamage();
         setHealth();
+        setDamage();
         setName();
         setAttribute();
         setXPGoal();
 
         addInviSkill();
-        addAntiKnockBackSkill();
+        addAntiKnockBackSkill(false);
+    }
+
+    public MobFactory(LivingEntity entity, int level) {
+        this.entity = entity;
+        this.level = level;
+        this.distance = 0;
+        this.isBoss = Utils.getRandom(500) < 5;
+        this.isBaby = Utils.getRandom(100) < 25;
+
+        setBaby();
+        setHealth();
+        setDamage();
+        setName();
+        setAttribute();
+
+        addInviSkill();
+        addAntiKnockBackSkill(true);
     }
 
     public MobFactory(int level, LivingEntity entity) {
@@ -46,8 +63,8 @@ public class MobFactory {
         this.isBoss = Math.random() < 0.00005;
         this.level = level;
 
-        setDamage();
         setHealth();
+        setDamage();
         setName();
         setAttribute();
     }
@@ -144,8 +161,8 @@ public class MobFactory {
         }.runTaskTimer(AdventureCraftCore.getInstance(), 0, 100);
     }
 
-    private void addAntiKnockBackSkill() {
-        if (Utils.getRandom(100) > 65) return;
+    private void addAntiKnockBackSkill(boolean ignore) {
+        if (!ignore && Utils.getRandom(100) > 65) return;
         Objects.requireNonNull(entity.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE)).setBaseValue(1.0D);
     }
 }

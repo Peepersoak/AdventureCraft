@@ -25,6 +25,16 @@ public class ScrollFactory {
         return paper;
     }
 
+    public ItemStack createScroll(String scrollType) {
+        ScrollType type = ScrollType.valueOf(scrollType);
+
+        ItemStack paper = new ItemStack(Material.PAPER);
+        paper.addUnsafeEnchantment(Enchantment.DURABILITY, 0);
+        paper.setItemMeta(getItemMeta(paper, type));
+
+        return paper;
+    }
+
     private ItemMeta getItemMeta(ItemStack item, ScrollType type) {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return null;
@@ -72,8 +82,6 @@ public class ScrollFactory {
                 scrollLore.add(Utils.color("&dall players in a 20 Block radius"));
                 scrollLore.add(Utils.color("&dfor 60 seconds"));
             }
-
-            case CLAIREVOYANCE -> scrollLore.add(Utils.color("&dView a players inventory"));
         }
 
         scrollLore.add(" ");

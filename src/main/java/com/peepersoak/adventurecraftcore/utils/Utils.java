@@ -14,8 +14,14 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.util.io.BukkitObjectInputStream;
+import org.bukkit.util.io.BukkitObjectOutputStream;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Random;
 
@@ -98,5 +104,31 @@ public class Utils {
         if (location == null) return;
         if (location.getWorld() == null) return;
         location.getWorld().dropItemNaturally(location, item);
+    }
+
+    public static Object deserialized(String data) {
+        try {
+            byte[] raw = Base64.getDecoder().decode(data);
+            ByteArrayInputStream is = new ByteArrayInputStream(raw);
+            BukkitObjectInputStream bs = new BukkitObjectInputStream(is);
+            return bs.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            AdventureCraftCore.getInstance().getLogger().warning("Failed to deserialized data!");
+        }
+        return null;
+    }
+
+    public static String serialized(Object object) {
+        try {
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            BukkitObjectOutputStream bs = new BukkitObjectOutputStream(os);
+            bs.writeObject(object);
+            bs.flush();
+            byte[] data = os.toByteArray();
+            return Base64.getEncoder().encodeToString(data);
+        } catch (IOException e) {
+            AdventureCraftCore.getInstance().getLogger().warning("Failed to serialized data!");
+        }
+        return null;
     }
 }

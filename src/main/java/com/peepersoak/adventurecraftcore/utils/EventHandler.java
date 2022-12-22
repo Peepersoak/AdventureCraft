@@ -1,13 +1,14 @@
 package com.peepersoak.adventurecraftcore.utils;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
-import com.peepersoak.adventurecraftcore.Sample;
-import com.peepersoak.adventurecraftcore.combat.events.CreeperEvents;
-import com.peepersoak.adventurecraftcore.combat.events.SkeletonEvent;
-import com.peepersoak.adventurecraftcore.combat.events.ZombieEvents;
+import com.peepersoak.adventurecraftcore.combat.GeneralMobs;
+import com.peepersoak.adventurecraftcore.combat.events.*;
+import com.peepersoak.adventurecraftcore.enchantment.SkillHandler;
+import com.peepersoak.adventurecraftcore.items.arrows.ArrowEvents;
 import com.peepersoak.adventurecraftcore.items.wards.WardEvents;
 import com.peepersoak.adventurecraftcore.world.DeathLocation;
 import com.peepersoak.adventurecraftcore.world.DropItem;
+import com.peepersoak.adventurecraftcore.world.ScrollEvents;
 import com.peepersoak.adventurecraftcore.world.WorldEvents;
 import org.bukkit.plugin.PluginManager;
 
@@ -17,13 +18,20 @@ public class EventHandler {
         pm.registerEvents(new ZombieEvents(), instance);
         pm.registerEvents(new CreeperEvents(), instance);
         pm.registerEvents(new SkeletonEvent(), instance);
+        pm.registerEvents(new GeneralMobs(), instance);
+        pm.registerEvents(new SpiderEvents(), instance);
+        pm.registerEvents(new PhantomEvent(), instance);
 
         pm.registerEvents(new WorldEvents(), instance);
         pm.registerEvents(new DeathLocation(), instance);
         pm.registerEvents(new DropItem(), instance);
+        pm.registerEvents(new ScrollEvents(), instance);
+        pm.registerEvents(new ArrowEvents(), instance);
+
+        pm.registerEvents(new InteractiveChat(), instance);
 
         pm.registerEvents(new WardEvents(), instance);
 
-        pm.registerEvents(new Sample(), instance);
+        new SkillHandler().registerSkillEvents(pm, instance);
     }
 }

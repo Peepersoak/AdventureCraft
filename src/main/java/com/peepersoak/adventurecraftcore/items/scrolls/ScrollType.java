@@ -7,5 +7,4 @@ public enum ScrollType {
     MAGNETIC_FORCE,
     ALL_FOR_ONE,
     ONE_FOR_ALL,
-    CLAIREVOYANCE
 }

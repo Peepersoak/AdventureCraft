@@ -1,7 +1,15 @@
 name: AdventureCraftCore
 version: ${project.version}
 main: com.peepersoak.adventurecraftcore.AdventureCraftCore
+depend: [WorldGuard]
 api-version: 1.18
 authors: [ Peepersoak ]
 description: Core Plugin of AdventureCraft Server
 website: www.peepersoak.com
+commands:
+  open:
+  scroll:
+  ward:
+  arrow:
+  dungeon:
+  books:

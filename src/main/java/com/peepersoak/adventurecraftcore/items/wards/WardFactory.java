@@ -53,6 +53,7 @@ public class WardFactory {
         lore.add(ChatColor.AQUA + "Right-Clicked to use");
         lore.add("");
         lore.add(ChatColor.RED + "One time use only!!");
+        lore.add(ChatColor.RED + "Will also work as a regular Totem");
         return lore;
     }
 }

@@ -6,7 +6,7 @@ import com.peepersoak.adventurecraftcore.utils.Utils;
 import net.minecraft.server.level.ServerLevel;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_18_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -28,6 +28,7 @@ public class WardEvents implements Listener {
         WardType type = WardType.valueOf(Utils.getPDC(meta).get(StringPath.CUSTOM_WARD, PersistentDataType.STRING));
         if (item.getType() != Material.TOTEM_OF_UNDYING) return;
 
+        e.getPlayer().getInventory().setItemInMainHand(new ItemStack(Material.AIR));
         Location location = e.getPlayer().getLocation();
         ServerLevel world = ((CraftWorld) Objects.requireNonNull(location.getWorld())).getHandle();
         world.addFreshEntityWithPassengers(new CustomWitch(location, type));

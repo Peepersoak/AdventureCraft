@@ -2,6 +2,7 @@ package com.peepersoak.adventurecraftcore.items.witch;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.items.wards.WardType;
+import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
@@ -9,10 +10,11 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.monster.Witch;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_18_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -31,15 +33,16 @@ public class CustomWitch extends Witch {
         this.setCanJoinRaid(false);
 
         org.bukkit.entity.Witch witch = (org.bukkit.entity.Witch) this.getBukkitEntity();
-        witch.setCustomName(Utils.color("&e" + type.name() + " WARD"));
+        witch.setCustomName(Utils.color("&e" + type.name().replace("_", " ") + " WARD"));
         witch.setCustomNameVisible(true);
+        witch.getPersistentDataContainer().set(StringPath.WARD_WITCH, PersistentDataType.STRING, "CustomWitch");
 
         runTask(type, witch);
     }
 
     @Override
     public void registerGoals() {
-        this.goalSelector.addGoal(0, new AvoidEntityGoal<>(this, net.minecraft.world.entity.monster.Monster.class, 10.0F, 2.0, 2.0));
+//        this.goalSelector.addGoal(0, new AvoidEntityGoal<>(this, net.minecraft.world.entity.monster.Monster.class, 10.0F, 2.0, 2.0));
 
         this.goalSelector.addGoal(1, new FloatGoal(this));
         this.goalSelector.addGoal(2, new WaterAvoidingRandomStrollGoal(this, 1.0D));

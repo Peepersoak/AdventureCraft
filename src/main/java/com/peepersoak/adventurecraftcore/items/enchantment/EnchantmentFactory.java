@@ -1,7 +1,20 @@
 package com.peepersoak.adventurecraftcore.items.enchantment;
 
-public class EnchantmentFactory {
+import com.peepersoak.adventurecraftcore.utils.EnchantmentType;
+import com.peepersoak.adventurecraftcore.utils.ScriptureSetting;
+import com.peepersoak.adventurecraftcore.utils.StringPath;
+import com.peepersoak.adventurecraftcore.utils.Utils;
+import org.bukkit.ChatColor;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.persistence.PersistentDataType;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+public class EnchantmentFactory {
+//
 //    public EnchantmentFactory(LivingEntity mob, FileConfiguration config) {
 //        this.config = config;
 //        normalChance = config.getInt(ScriptureSetting.DROP_CHANCE_NORMAL);
@@ -18,7 +31,6 @@ public class EnchantmentFactory {
 //    private final LivingEntity mob;
 //    private final int level;
 //    private final EnchantmentType enchantmentType;
-//
 //    private final int normalChance;
 //    private final int customChance;
 //    private final int customSkill;
@@ -37,7 +49,10 @@ public class EnchantmentFactory {
 //    }
 //
 //    private EnchantmentType getEnchantmentType() {
-//        if (this.level < 15) {
+//
+//
+//
+//        if (this.level < 10) {
 //            return EnchantmentType.NORMAL;
 //        } else if (this.level < 30) {
 //            int random = Utils.getRandom(100);
@@ -83,7 +98,7 @@ public class EnchantmentFactory {
 //                    materialLore.add("&7a portion of your life base");
 //                    materialLore.add("&7on your damage");
 //                }
-//                case REJUVINATION -> {
+//                case REJUVENATION -> {
 //                    materialLore.add("&7Regain you health after");
 //                    materialLore.add("&7Sleeping peacefully");
 //                }
@@ -141,15 +156,5 @@ public class EnchantmentFactory {
 //        if (this.level > 30 && this.level <= 40) return color + "Legendary Scripture";
 //        if (this.level > 40 && this.level <= 50) return color + "Ancient Scripture";
 //        return color + "á’·âŠ£ê–Ž||!Â¡â�‘á“µâ•Žá’·";
-//    }
-//
-//    public void getNormalEnchantLevel() {
-//        if (this.level <= 10 && this.level >= 5) {
-//            String enchantName = enchantmentName.toLowerCase().replace(" ", "_");
-//            int enchantMaxLevel = Enchantment.getByKey(NamespacedKey.minecraft(enchantName)).getMaxLevel();
-//            int random = rand.nextInt(10) + 1;
-//            materialLevel = enchantMaxLevel + random;
-//        }
-//        if (mobLevel > 10) materialLevel = mobLevel;
 //    }
 }

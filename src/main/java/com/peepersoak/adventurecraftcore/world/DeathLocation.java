@@ -21,7 +21,6 @@ public class DeathLocation implements Listener {
         int y = location.getBlockY();
         int z = location.getBlockZ();
         String world = Objects.requireNonNull(location.getWorld()).getName();
-
         String msg = "&6" + name + " &7died in " + world + " " + x + " " + y + " " + z;
 
         Bukkit.broadcastMessage(Utils.color(msg));

@@ -15,9 +15,10 @@ import net.minecraft.world.entity.animal.horse.Donkey;
 import net.minecraft.world.entity.animal.horse.Horse;
 import net.minecraft.world.entity.animal.horse.Llama;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.npc.AbstractVillager;
 import net.minecraft.world.entity.npc.Villager;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_18_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -43,7 +44,7 @@ public class AggresiveVirusZombie extends Zombie {
 
     @Override
     public void registerGoals() {
-        this.goalSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, Villager.class, true));
+        this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, AbstractVillager.class, true));
         this.goalSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, ServerPlayer.class, true));
         this.goalSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, IronGolem.class, true));
 
@@ -67,8 +68,13 @@ public class AggresiveVirusZombie extends Zombie {
 
         this.goalSelector.addGoal(2, new LookAtPlayerGoal(this, ServerPlayer.class, 8.0F));
 
+        this.goalSelector.addGoal(6, new MoveThroughVillageGoal(this, 1.0, true, 4, this::canBreakDoors));
+
         this.goalSelector.addGoal(5, new FloatGoal(this));
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 0.8));
         this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
+
+        this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 1.0));
+
     }
 }
