@@ -2,10 +2,14 @@ package com.peepersoak.adventurecraftcore.utils;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.combat.levelmobs.MobFactory;
+import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.variation.AggresiveVirusZombie;
+import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.variation.BoomerZombie;
+import net.minecraft.server.level.ServerLevel;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -20,10 +24,7 @@ import org.bukkit.util.io.BukkitObjectOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 public class Utils {
 
@@ -130,5 +131,15 @@ public class Utils {
             AdventureCraftCore.getInstance().getLogger().warning("Failed to serialized data!");
         }
         return null;
+    }
+
+    public static void spawnRandomZombie(Location location) {
+        if (location == null) return;
+        ServerLevel world = ((CraftWorld) Objects.requireNonNull(location.getWorld())).getHandle();
+        if (Utils.getRandom(100, 1) < 15) {
+            world.addFreshEntityWithPassengers(new BoomerZombie(location));
+            return;
+        }
+        world.addFreshEntityWithPassengers(new AggresiveVirusZombie(location));
     }
 }

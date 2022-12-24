@@ -1,7 +1,7 @@
 package com.peepersoak.adventurecraftcore.utils;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
-import com.peepersoak.adventurecraftcore.combat.GeneralMobs;
+import com.peepersoak.adventurecraftcore.combat.MainSpawnEvent;
 import com.peepersoak.adventurecraftcore.combat.events.*;
 import com.peepersoak.adventurecraftcore.enchantment.SkillHandler;
 import com.peepersoak.adventurecraftcore.items.arrows.ArrowEvents;
@@ -18,9 +18,11 @@ public class EventHandler {
         pm.registerEvents(new ZombieEvents(), instance);
         pm.registerEvents(new CreeperEvents(), instance);
         pm.registerEvents(new SkeletonEvent(), instance);
-        pm.registerEvents(new GeneralMobs(), instance);
+        pm.registerEvents(new MainSpawnEvent(), instance);
         pm.registerEvents(new SpiderEvents(), instance);
         pm.registerEvents(new PhantomEvent(), instance);
+        pm.registerEvents(new DrownedEvents(), instance);
+        pm.registerEvents(new EndermanEvents(), instance);
 
         pm.registerEvents(new WorldEvents(), instance);
         pm.registerEvents(new DeathLocation(), instance);

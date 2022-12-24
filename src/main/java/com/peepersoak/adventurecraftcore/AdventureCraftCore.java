@@ -28,6 +28,8 @@ public final class AdventureCraftCore extends JavaPlugin {
     private static Economy econ = null;
     public static StateFlag PRISON_FLAG;
     public static StateFlag ZOMBIE_BREAK;
+    public static StateFlag LEVEL_MOBS;
+    public static StateFlag ALLOW_CUSTOM_MOBS;
     private static AdventureCraftCore instance;
     private final EventHandler eventHandler = new EventHandler();
     private final CraftingHandler craftingHandler = new CraftingHandler();
@@ -82,12 +84,20 @@ public final class AdventureCraftCore extends JavaPlugin {
         try {
             StateFlag flag = new StateFlag("allow-scroll", true);
             StateFlag allowBreakZombie = new StateFlag("allow-zombie-break", true);
+            StateFlag allowLevelMobs = new StateFlag("allow-level-mobs", true);
+            StateFlag allowCustomMobs = new StateFlag("allow-custom-mobs", true);
+
             registry.register(flag);
             registry.register(allowBreakZombie);
+            registry.register(allowLevelMobs);
+            registry.register(allowCustomMobs);
+
             PRISON_FLAG = flag;
             ZOMBIE_BREAK = allowBreakZombie;
+            LEVEL_MOBS = allowLevelMobs;
+            ALLOW_CUSTOM_MOBS = allowCustomMobs;
         } catch (FlagConflictException e) {
-            //
+            this.getLogger().warning("Failed to register some flags!");
         }
     }
 
@@ -108,7 +118,6 @@ public final class AdventureCraftCore extends JavaPlugin {
         for (String worldName : getWorldList) {
             if (Bukkit.getWorld(worldName) == null) {
                WorldCreator creator = new WorldCreator(worldName);
-               creator.environment(World.Environment.NETHER);
                World world = creator.createWorld();
                if (world != null) {
                    world.setKeepSpawnInMemory(false);

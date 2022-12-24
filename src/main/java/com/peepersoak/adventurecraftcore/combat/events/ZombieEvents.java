@@ -34,18 +34,6 @@ public class ZombieEvents implements Listener {
     private final NamespacedKey key = new NamespacedKey(AdventureCraftCore.getInstance(), "PlayerZombie");
 
     @EventHandler
-    public void onMobSpawn(CreatureSpawnEvent e) {
-        if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER) return;
-        if (e.getEntity() instanceof Zombie zombie) {
-            if (zombie.getType() == EntityType.ZOMBIE) {
-                if (Utils.getPDC(zombie).has(StringPath.CUSTOM_ZOMBIE, PersistentDataType.STRING)) return;
-                spawnRandomZombie(zombie.getLocation());
-                e.setCancelled(true);
-            }
-        }
-    }
-
-    @EventHandler
     public void onDamage(EntityDamageEvent e) {
         if (e.getEntity() instanceof Zombie zombie) {
             if (!Utils.getPDC(zombie).has(StringPath.CUSTOM_ZOMBIE, PersistentDataType.STRING)) return;
@@ -70,7 +58,7 @@ public class ZombieEvents implements Listener {
         if (event.getDamager() instanceof Zombie zombie) {
             if (!Utils.getPDC(zombie).has(StringPath.CUSTOM_ZOMBIE, PersistentDataType.STRING)) return;
             Location loc = entity.getLocation();
-            spawnRandomZombie(loc);
+            Utils.spawnRandomZombie(loc);
             Utils.zombieLevelUp(zombie);
         }
     }
@@ -95,7 +83,7 @@ public class ZombieEvents implements Listener {
 
         Skill skill = new Skill();
         skill.setItem(item);
-        if (skill.getLoreName().contains("SOUL BOUND")) return;
+        if (skill.getLoreName() == null || skill.getLoreName().contains("SOUL BOUND")) return;
 
         String material = item.getType().toString().toLowerCase();
         ItemStack air = new ItemStack(Material.AIR);
@@ -154,18 +142,6 @@ public class ZombieEvents implements Listener {
         if (zombie.getPersistentDataContainer().has(key, PersistentDataType.STRING)) {
             e.getDrops().clear();
         }
-    }
-
-    private void spawnRandomZombie(Location location) {
-        if (location == null) return;
-        ServerLevel world = ((CraftWorld) Objects.requireNonNull(location.getWorld())).getHandle();
-
-        if (Utils.getRandom(100, 1) < 15) {
-            world.addFreshEntityWithPassengers(new BoomerZombie(location));
-            return;
-        }
-
-        world.addFreshEntityWithPassengers(new AggresiveVirusZombie(location));
     }
 
     private void explodeZombie(Zombie zombie) {

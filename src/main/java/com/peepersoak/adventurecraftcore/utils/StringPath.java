@@ -7,6 +7,7 @@ public class StringPath {
 
     public static NamespacedKey MOB_LEVEL_KEY = new NamespacedKey(AdventureCraftCore.getInstance(), "MobLevel");
     public static NamespacedKey CUSTOM_ZOMBIE = new NamespacedKey(AdventureCraftCore.getInstance(), "CustomZombie");
+    public static NamespacedKey CUSTOM_SQUID = new NamespacedKey(AdventureCraftCore.getInstance(), "CustomSquid");
     public static NamespacedKey MOB_XP = new NamespacedKey(AdventureCraftCore.getInstance(), "MobXP");
     public static NamespacedKey MOB_XP_GOAL = new NamespacedKey(AdventureCraftCore.getInstance(), "GoalXP");
     public static NamespacedKey CUSTOM_ARROW = new NamespacedKey(AdventureCraftCore.getInstance(), "CustomArrow");

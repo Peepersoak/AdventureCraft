@@ -4,9 +4,15 @@ import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.utils.ConfigPath;
 import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
+import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldguard.WorldGuard;
+import com.sk89q.worldguard.protection.ApplicableRegionSet;
+import com.sk89q.worldguard.protection.regions.RegionContainer;
+import com.sk89q.worldguard.protection.regions.RegionQuery;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.entity.Hoglin;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Zombie;
 import org.bukkit.persistence.PersistentDataType;
@@ -90,11 +96,13 @@ public class MobFactory {
     }
 
     private void setDamage() {
-        double damage = Objects.requireNonNull(entity.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)).getBaseValue();
-        this.newDamage = damage + AdventureCraftCore.getInstance().getConfig().getDouble(ConfigPath.DAMAGE_MULTIPLIER) * level;
+        if (entity.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE) != null) {
+            double damage = Objects.requireNonNull(entity.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)).getBaseValue();
+            this.newDamage = damage + AdventureCraftCore.getInstance().getConfig().getDouble(ConfigPath.DAMAGE_MULTIPLIER) * level;
 
-        if (isBoss) {
-            this.newDamage *= AdventureCraftCore.getInstance().getConfig().getDouble(ConfigPath.BOSS_MULTIPLIERE);
+            if (isBoss) {
+                this.newDamage *= AdventureCraftCore.getInstance().getConfig().getDouble(ConfigPath.BOSS_MULTIPLIERE);
+            }
         }
     }
 
@@ -107,6 +115,15 @@ public class MobFactory {
     }
 
     private void setLevel() {
+        com.sk89q.worldedit.util.Location location = new com.sk89q.worldedit.util.Location(BukkitAdapter.adapt(entity.getWorld()), entity.getLocation().getBlockX(), entity.getLocation().getBlockY(), entity.getLocation().getBlockZ());
+        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+        RegionQuery query = container.createQuery();
+        ApplicableRegionSet set = query.getApplicableRegions(location);
+        if (!set.testState(null, AdventureCraftCore.LEVEL_MOBS)) {
+            this.level = 0;
+            return;
+        }
+
         int threshold = AdventureCraftCore.getInstance().getConfig().getInt(ConfigPath.DISTANCE_THRESHOLD);
 
         if (entity.getWorld().getEnvironment() == World.Environment.NETHER) {
@@ -124,6 +141,8 @@ public class MobFactory {
     }
 
     private void setName() {
+        if (this.level <= 0) return;
+
         String name = Utils.color("&cLVL &6" + level + " &c" + entity.getType());
 
         if (isBoss) {
@@ -138,13 +157,22 @@ public class MobFactory {
             newHealth = AdventureCraftCore.getInstance().getConfig().getInt(ConfigPath.MAX_HEALTH);
         }
 
-        if (newDamage > AdventureCraftCore.getInstance().getConfig().getInt(ConfigPath.MAX_DAMAGE)) {
-            newDamage = AdventureCraftCore.getInstance().getConfig().getInt(ConfigPath.MAX_DAMAGE);
+        if (entity.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE) != null) {
+            if (newDamage > AdventureCraftCore.getInstance().getConfig().getInt(ConfigPath.MAX_DAMAGE)) {
+                newDamage = AdventureCraftCore.getInstance().getConfig().getInt(ConfigPath.MAX_DAMAGE);
+            }
+        }
+
+        if (entity instanceof Hoglin hoglin) {
+            Objects.requireNonNull(hoglin.getAttribute(Attribute.GENERIC_ATTACK_KNOCKBACK)).setBaseValue(8);
         }
 
         Objects.requireNonNull(entity.getAttribute(Attribute.GENERIC_MAX_HEALTH)).setBaseValue(newHealth);
         this.entity.setHealth(newHealth);
-        Objects.requireNonNull(entity.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)).setBaseValue(newDamage);
+
+        if (entity.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE) != null) {
+            Objects.requireNonNull(entity.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE)).setBaseValue(newDamage);
+        }
     }
 
     private void addInviSkill() {
