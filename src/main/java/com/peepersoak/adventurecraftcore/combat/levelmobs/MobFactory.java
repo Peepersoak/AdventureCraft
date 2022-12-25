@@ -2,6 +2,7 @@ package com.peepersoak.adventurecraftcore.combat.levelmobs;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.utils.ConfigPath;
+import com.peepersoak.adventurecraftcore.utils.Flags;
 import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
@@ -115,12 +116,12 @@ public class MobFactory {
     }
 
     private void setLevel() {
-        if (!Utils.checkWGState(entity, AdventureCraftCore.LEVEL_MOBS)) {
+        if (!Utils.checkWGState(entity, Flags.LEVEL_MOBS)) {
             this.level = 0;
             return;
         };
 
-        int threshold = Utils.getMobLevelThreshold(entity, AdventureCraftCore.MOB_THRESHOLD);
+        int threshold = Utils.getMobLevelThreshold(entity, Flags.MOB_THRESHOLD);
 
         if (entity.getWorld().getEnvironment() == World.Environment.NETHER) {
             threshold /= 8;

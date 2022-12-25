@@ -17,4 +17,5 @@ public class StringPath {
     public static NamespacedKey SCROLL_MAGNETIC = new NamespacedKey(AdventureCraftCore.getInstance(), "ScrollIsMagnetic");
     public static NamespacedKey WARD_WITCH = new NamespacedKey(AdventureCraftCore.getInstance(), "CustomWitchWard");
     public static NamespacedKey ENCHANT_META = new NamespacedKey(AdventureCraftCore.getInstance(), "EnchantMeta");
+    public static NamespacedKey DUNGEON_LIFE = new NamespacedKey(AdventureCraftCore.getInstance(), "DungeonLife");
 }

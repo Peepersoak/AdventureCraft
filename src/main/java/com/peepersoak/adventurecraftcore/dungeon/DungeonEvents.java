@@ -5,6 +5,8 @@ import com.peepersoak.adventurecraftcore.combat.levelmobs.MobFactory;
 import com.peepersoak.adventurecraftcore.items.arrows.ArrowFactory;
 import com.peepersoak.adventurecraftcore.items.scrolls.ScrollFactory;
 import com.peepersoak.adventurecraftcore.items.wards.WardFactory;
+import com.peepersoak.adventurecraftcore.utils.Flags;
+import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
 import org.bukkit.*;
 import org.bukkit.block.BlockState;
@@ -18,6 +20,7 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
@@ -37,8 +40,6 @@ public class DungeonEvents implements CommandExecutor, Listener {
         loadLootTables(DungeonSettings.BOSS_LOOT_TABLE, bossLootList);
         loadLootTables(DungeonSettings.CHEST_LOOT_TABLE, chestLootList);
         loadMobType();
-
-        enabledDungeon = AdventureCraftCore.getInstance().getDungeonSetting().getConfig().getBoolean(DungeonSettings.ENABLE_DUNGEON);
 
         List<String> getWorldList = AdventureCraftCore.getInstance().getDungeonSetting().getConfig().getStringList(DungeonSettings.DUNGEON_TYPE);
         Collections.shuffle(getWorldList);
@@ -65,6 +66,7 @@ public class DungeonEvents implements CommandExecutor, Listener {
 
         spawnBoss();
         updateEntityCount();
+        createDungeonLife();
     }
 
     private final World dungeonWorld;
@@ -78,17 +80,15 @@ public class DungeonEvents implements CommandExecutor, Listener {
     private final List<Location> openChest = new ArrayList<>();
     private final List<EntityType> mobType = new ArrayList<>();
     private final List<UUID> playerUUID = new ArrayList<>();
-    private boolean setSpawner = false;
     private final ScrollFactory scrollFactory = new ScrollFactory();
     private final WardFactory wardFactory = new WardFactory();
     private final ArrowFactory arrowFactory = new ArrowFactory();
     private final List<Material> chestType = new ArrayList<>();
     private int maxEntityCount = 0;
-    private final int MAX_ENTITY = 200;
     private final ItemStack dungeonCoin = new ItemStack(Material.SUNFLOWER);
+    private ItemStack dungeonLife;
     private Location bossSpawnLocation;
     private final NamespacedKey BOSS_PERSISTENT_DATA = new NamespacedKey(AdventureCraftCore.getInstance(), "BossData");
-    private boolean enabledDungeon;
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -117,15 +117,6 @@ public class DungeonEvents implements CommandExecutor, Listener {
 
         if (args.length == 1) {
             String cmd = args[0];
-            if (cmd.equalsIgnoreCase("spawner")) {
-                if (setSpawner) {
-                    setSpawner = false;
-                    player.sendMessage(Utils.color("&cSpawner set disabled"));
-                } else {
-                    setSpawner = true;
-                    player.sendMessage(Utils.color("&6Break block to set the spawner"));
-                }
-            }
 
             if (cmd.equalsIgnoreCase("save")) {
                saveItemStack(mobsLootList, DungeonSettings.MOB_LOOT_TABLE);
@@ -140,25 +131,9 @@ public class DungeonEvents implements CommandExecutor, Listener {
                AdventureCraftCore.getInstance().getLogger().info("Mob type has been save");
             }
 
-            if (cmd.equalsIgnoreCase("bossloc")) {
-                bossSpawnLocation = player.getLocation();
-                AdventureCraftCore.getInstance().getDungeonSetting().writeString(DungeonSettings.BOSS_SPAWN, Utils.serialized(bossSpawnLocation));
-                player.sendMessage(Utils.color("&6Boss spawn has been set"));
-            }
-
-            if (cmd.equalsIgnoreCase("true")) {
+            if (cmd.equalsIgnoreCase("reset")) {
                 maxEntityCount = 0;
-                enabledDungeon = true;
-                spawnBoss();
-                AdventureCraftCore.getInstance().getDungeonSetting().writeBoolean(DungeonSettings.ENABLE_DUNGEON, enabledDungeon);
-                player.sendMessage(Utils.color("&6Dungeon has been enabled"));
-            }
-            if (cmd.equalsIgnoreCase("false")) {
-                maxEntityCount = 0;
-                removeAllEntities();
-                enabledDungeon = false;
-                AdventureCraftCore.getInstance().getDungeonSetting().writeBoolean(DungeonSettings.ENABLE_DUNGEON, enabledDungeon);
-                player.sendMessage(Utils.color("&cDungeon has been disabled"));
+                player.sendMessage(Utils.color("&6Dungeon has been reset"));
             }
         }
 
@@ -193,6 +168,9 @@ public class DungeonEvents implements CommandExecutor, Listener {
                 }
                 else if (type.equalsIgnoreCase("coin")) {
                     player.getInventory().addItem(dungeonCoin);
+                }
+                else if (type.equalsIgnoreCase("life")) {
+                    player.getInventory().addItem(dungeonLife);
                 }
             }
 
@@ -258,19 +236,20 @@ public class DungeonEvents implements CommandExecutor, Listener {
         final World world = location.getWorld();
         if (world == null || world != dungeonWorld) return;
 
-        if (!enabledDungeon) {
+        if (!Utils.checkWGState(e.getEntity(), Flags.ENABLE_DUNGEON)) {
             e.getEntity().remove();
             e.setCancelled(true);
             return;
         }
 
-        if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER) {
+        if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER && Utils.checkWGState(e.getEntity(), Flags.DUNGEON_SPAWNER_ONLY)) {
             int minLevel = 0;
             int maxLevel = playerUUID.size() * 5;
             int mobLevel = Utils.getRandom(maxLevel, minLevel);
 
             e.getEntity().remove();
 
+            int MAX_ENTITY = 200;
             if (maxEntityCount > MAX_ENTITY) return;
             Collections.shuffle(mobType);
             LivingEntity entity = (LivingEntity) world.spawnEntity(location, mobType.get(0));
@@ -285,7 +264,7 @@ public class DungeonEvents implements CommandExecutor, Listener {
         if (e.getEntity() instanceof Player) return;
 
         if (Utils.getPDC(e.getEntity()).has(BOSS_PERSISTENT_DATA, PersistentDataType.INTEGER)) {
-            if (chestLootList.size() <= 0) return;
+            if (chestLootList.size() == 0) return;
             int itemAmount = Utils.getRandom(10,5);
 
             int xpAmount = Utils.getRandom(2000, 1000);
@@ -300,22 +279,46 @@ public class DungeonEvents implements CommandExecutor, Listener {
             return;
         }
 
-        if (!mobType.contains(e.getEntityType())) return;
         if (maxEntityCount > 0) maxEntityCount--;
 
         int xpAmount = Utils.getRandom(1000, 100);
         e.setDroppedExp(xpAmount);
 
         if (Utils.getRandom(100) < 25) {
-            dungeonWorld.dropItemNaturally(e.getEntity().getLocation(), dungeonCoin);
+            e.getDrops().add(dungeonCoin);
         }
 
         int itemAmount = Utils.getRandom(5, 1);
-        if (mobsLootList.size() <= 0) return;
+        if (mobsLootList.size() == 0) return;
         for (int i = 0; i < itemAmount; i++) {
             Collections.shuffle(mobsLootList);
             ItemStack item = createLootItem(mobsLootList.get(0), false);
-            dungeonWorld.dropItemNaturally(e.getEntity().getLocation(), item);
+            e.getDrops().add(item);
+        }
+    }
+
+    @EventHandler
+    public void onDeath(EntityDamageEvent e) {
+        if (!(e.getEntity() instanceof Player player)) return;
+        if (player.getWorld() != dungeonWorld) return;
+        if (!Utils.checkWGState(player, Flags.ALLOW_DUNGEON_LIFE)) return;
+        if (e.getFinalDamage() >= player.getHealth()) {
+            Inventory inv = player.getInventory();
+            HashMap<Integer, ? extends ItemStack> map = inv.all(dungeonLife.getType());
+
+            for (Integer index : map.keySet()) {
+                ItemStack item = inv.getItem(index);
+                if (item == null) continue;
+                if (item.getItemMeta() == null) continue;
+                if (Utils.getPDC(item.getItemMeta()).has(StringPath.DUNGEON_LIFE, PersistentDataType.INTEGER)) {
+                    e.setCancelled(true);
+                    if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
+                    else inv.setItem(index, null);
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "warp " + dungeonWorld.getName() + " " + player.getName());
+                    player.sendMessage(Utils.color("&4Your &6straw doll &4has been consumed!"));
+                    break;
+                }
+            }
         }
     }
 
@@ -487,7 +490,6 @@ public class DungeonEvents implements CommandExecutor, Listener {
     }
 
     private void spawnBoss() {
-        if (!enabledDungeon) return;
         String rawLocation = AdventureCraftCore.getInstance().getDungeonSetting().getConfig().getString(DungeonSettings.BOSS_SPAWN);
         if (rawLocation == null) return;
         bossSpawnLocation = (Location) Utils.deserialized(rawLocation);
@@ -546,6 +548,32 @@ public class DungeonEvents implements CommandExecutor, Listener {
                 maxEntityCount = count;
             }
         }.runTaskTimer(AdventureCraftCore.getInstance(), 0, 20);
+    }
+
+    private void createDungeonLife() {
+        ItemStack item = new ItemStack(Material.TOTEM_OF_UNDYING);
+        item.addUnsafeEnchantment(Enchantment.DURABILITY, 0);
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return;
+        meta.setDisplayName(Utils.color("&4STRAW DOLL"));
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
+        List<String> lore = new ArrayList<>();
+        lore.add(Utils.color("&8Your fail safe item"));
+        lore.add(Utils.color("&8Will automatically teleport"));
+        lore.add(Utils.color("&8you back to spawn when you"));
+        lore.add(Utils.color("&8take a lethal damage"));
+        lore.add("");
+        lore.add(Utils.color("&8Just put this somewhere in your"));
+        lore.add(Utils.color("&8Inventory for it to work"));
+        lore.add("");
+        lore.add(Utils.color("&8Can be use as a regular totem"));
+        meta.setLore(lore);
+
+        Utils.getPDC(meta).set(StringPath.DUNGEON_LIFE, PersistentDataType.INTEGER, 1);
+        item.setItemMeta(meta);
+
+        dungeonLife = item;
     }
 
     public void removeAllEntities() {

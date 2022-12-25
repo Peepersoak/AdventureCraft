@@ -3,6 +3,7 @@ package com.peepersoak.adventurecraftcore.world;
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.items.scrolls.ScrollType;
 import com.peepersoak.adventurecraftcore.utils.AllPotionEffect;
+import com.peepersoak.adventurecraftcore.utils.Flags;
 import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
 import com.sk89q.worldguard.LocalPlayer;
@@ -56,13 +57,13 @@ public class ScrollEvents implements Listener {
         RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
         RegionQuery query = container.createQuery();
 
-        if (!query.testState(localPlayer.getLocation(), localPlayer, AdventureCraftCore.PRISON_FLAG)) {
+        if (!query.testState(localPlayer.getLocation(), localPlayer, Flags.ALLOW_SCROLL)) {
             return;
         }
 
         switch (type) {
             case TELEPORT -> {
-                if (!Utils.checkWGState(player, AdventureCraftCore.ALLOW_SCROLL_TP)) return;
+                if (!Utils.checkWGState(player, Flags.ALLOW_SCROLL_TP)) return;
                 Location bedSpawn = player.getBedSpawnLocation();
                 if (bedSpawn != null) {
                     consumeItem(e.getItem(), player);
@@ -84,13 +85,13 @@ public class ScrollEvents implements Listener {
             }
 
             case ACCOMPANY -> {
-                if (!Utils.checkWGState(player, AdventureCraftCore.ALLOW_SCROLL_TP)) return;
+                if (!Utils.checkWGState(player, Flags.ALLOW_SCROLL_TP)) return;
                 openTeleportGUI(player, false);
                 consumeItem(e.getItem(), player);
             }
 
             case MAGNETIC_FORCE -> {
-                if (!Utils.checkWGState(player, AdventureCraftCore.ALLOW_SCROLL_TP)) return;
+                if (!Utils.checkWGState(player, Flags.ALLOW_SCROLL_TP)) return;
                 openTeleportGUI(player, true);
                 consumeItem(e.getItem(), player);
             }

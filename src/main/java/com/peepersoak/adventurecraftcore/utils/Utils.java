@@ -167,4 +167,15 @@ public class Utils {
 
         return customThreshold == null ? defaultThreshold : customThreshold;
     }
+
+    public static int getWorldGuardValue(Entity entity, IntegerFlag flag) {
+        com.sk89q.worldedit.util.Location location = new com.sk89q.worldedit.util.Location(BukkitAdapter.adapt(entity.getWorld()), entity.getLocation().getBlockX(), entity.getLocation().getBlockY(), entity.getLocation().getBlockZ());
+        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+        RegionQuery query = container.createQuery();
+        ApplicableRegionSet set = query.getApplicableRegions(location);
+
+        Integer customValue = set.queryValue(null, flag);
+
+        return customValue != null ? customValue : -1;
+    }
 }

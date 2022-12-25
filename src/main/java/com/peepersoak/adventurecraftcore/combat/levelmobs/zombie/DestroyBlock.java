@@ -1,6 +1,7 @@
 package com.peepersoak.adventurecraftcore.combat.levelmobs.zombie;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
+import com.peepersoak.adventurecraftcore.utils.Flags;
 import com.peepersoak.adventurecraftcore.utils.Utils;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.extent.Extent;
@@ -77,7 +78,7 @@ public class DestroyBlock extends BukkitRunnable {
 
     @Override
     public void run() {
-        if (!Utils.checkWGState(entity, AdventureCraftCore.ZOMBIE_BREAK)) return;
+        if (!Utils.checkWGState(entity, Flags.ZOMBIE_BREAK)) return;
         getBlock();
         if (this.entity.isDead()) this.cancel();
     }

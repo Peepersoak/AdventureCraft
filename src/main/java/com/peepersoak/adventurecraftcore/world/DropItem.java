@@ -5,6 +5,7 @@ import com.peepersoak.adventurecraftcore.enchantment.ItemFactory;
 import com.peepersoak.adventurecraftcore.items.arrows.ArrowFactory;
 import com.peepersoak.adventurecraftcore.items.scrolls.ScrollFactory;
 import com.peepersoak.adventurecraftcore.items.wards.WardFactory;
+import com.peepersoak.adventurecraftcore.utils.Flags;
 import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
 import org.bukkit.Location;
@@ -37,11 +38,15 @@ public class DropItem implements Listener {
 
             Location location = e.getEntity().getLocation();
 
-            if (!Utils.checkWGState(monster, AdventureCraftCore.ALLOW_DROPS)) return;
+            if (!Utils.checkWGState(monster, Flags.ALLOW_DROPS)) return;
 
-            Utils.dropItem(scrollFactory.createScroll(), 5, location);
-            Utils.dropItem(wardFactory.createWard(), 5, location);
-            Utils.dropItem(arrowFactory.createArrow(), 5, location);
+            int scrollChance = Utils.getWorldGuardValue(monster, Flags.SCROLL_CHANCE);
+            int wardChance = Utils.getWorldGuardValue(monster, Flags.WARD_CHANCE);
+            int arrowChance = Utils.getWorldGuardValue(monster, Flags.ARROW_CHANCE);
+
+            Utils.dropItem(scrollFactory.createScroll(), scrollChance == -1 ? 5 : scrollChance, location);
+            Utils.dropItem(wardFactory.createWard(), wardChance == -1 ? 5 : wardChance, location);
+            Utils.dropItem(arrowFactory.createArrow(), arrowChance == -1 ? 5 : arrowChance, location);
 
             itemFactory.setPaper(monster);
             Utils.dropItem(itemFactory.createPaper(), 5, location);

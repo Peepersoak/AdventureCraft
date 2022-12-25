@@ -1,6 +1,7 @@
 package com.peepersoak.adventurecraftcore.enchantment;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
+import com.peepersoak.adventurecraftcore.utils.Flags;
 import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
 import org.bukkit.ChatColor;
@@ -25,7 +26,6 @@ public class ItemFactory {
 	public ItemFactory() {
 		config = AdventureCraftCore.getInstance().getConfig();
 	}
-
 	private LivingEntity mob;
 	private int mobLevel;
 	private int materialLevel;
@@ -106,6 +106,12 @@ public class ItemFactory {
 	public void setMaterialType() {
 		int customChance = config.getInt("Drop_Chance." + "Custom");
 		int skillChance = config.getInt("Drop_Chance." + "Skill");
+
+		int customChanceWG = Utils.getWorldGuardValue(mob, Flags.CUSTOM_ENCHANT_CHANCE);
+		int skillChanceWG = Utils.getWorldGuardValue(mob, Flags.SKILL_ENCHANT_CHANCE);
+
+		if (customChanceWG != -1) customChance = customChanceWG;
+		if (skillChanceWG != -1) skillChance = skillChanceWG;
 		
 		if (mobLevel <= 15) {
 			materialType = "Normal";

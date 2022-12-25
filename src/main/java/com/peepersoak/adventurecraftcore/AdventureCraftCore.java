@@ -5,15 +5,7 @@ import com.peepersoak.adventurecraftcore.commands.*;
 import com.peepersoak.adventurecraftcore.dungeon.DungeonEvents;
 import com.peepersoak.adventurecraftcore.dungeon.DungeonSettings;
 import com.peepersoak.adventurecraftcore.enchantment.crafting.events.CraftingHandler;
-import com.peepersoak.adventurecraftcore.utils.Data;
-import com.peepersoak.adventurecraftcore.utils.EventHandler;
-import com.peepersoak.adventurecraftcore.utils.FileName;
-import com.peepersoak.adventurecraftcore.utils.OpenInventory;
-import com.sk89q.worldguard.WorldGuard;
-import com.sk89q.worldguard.protection.flags.IntegerFlag;
-import com.sk89q.worldguard.protection.flags.StateFlag;
-import com.sk89q.worldguard.protection.flags.registry.FlagConflictException;
-import com.sk89q.worldguard.protection.flags.registry.FlagRegistry;
+import com.peepersoak.adventurecraftcore.utils.*;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -26,13 +18,6 @@ import java.util.Objects;
 
 public final class AdventureCraftCore extends JavaPlugin {
     private static Economy econ = null;
-    public static StateFlag PRISON_FLAG;
-    public static StateFlag ZOMBIE_BREAK;
-    public static StateFlag LEVEL_MOBS;
-    public static StateFlag ALLOW_CUSTOM_MOBS;
-    public static StateFlag ALLOW_SCROLL_TP;
-    public static StateFlag ALLOW_DROPS;
-    public static IntegerFlag MOB_THRESHOLD;
     private static AdventureCraftCore instance;
     private final EventHandler eventHandler = new EventHandler();
     private final CraftingHandler craftingHandler = new CraftingHandler();
@@ -73,43 +58,12 @@ public final class AdventureCraftCore extends JavaPlugin {
 
     @Override
     public void onLoad() {
-        registerFlags();
+        new WorldFlags();
     }
 
     @Override
     public void onDisable() {
         dungeonEvents.removeAllEntities();
-    }
-
-    private void registerFlags() {
-        FlagRegistry registry = WorldGuard.getInstance().getFlagRegistry();
-        try {
-            StateFlag flag = new StateFlag("allow-scroll", true);
-            StateFlag allowBreakZombie = new StateFlag("allow-zombie-break", true);
-            StateFlag allowLevelMobs = new StateFlag("allow-level-mobs", true);
-            StateFlag allowCustomMobs = new StateFlag("allow-custom-mobs", true);
-            StateFlag allowScrollTP = new StateFlag("allow-scroll-tp", true);
-            StateFlag allowCustomDrops = new StateFlag("allow-custom-drops", true);
-            IntegerFlag mobLevelThreshold = new IntegerFlag("mob-threshold");
-
-            registry.register(flag);
-            registry.register(allowBreakZombie);
-            registry.register(allowLevelMobs);
-            registry.register(allowCustomMobs);
-            registry.register(allowScrollTP);
-            registry.register(allowCustomDrops);
-            registry.register(mobLevelThreshold);
-
-            PRISON_FLAG = flag;
-            ZOMBIE_BREAK = allowBreakZombie;
-            LEVEL_MOBS = allowLevelMobs;
-            ALLOW_CUSTOM_MOBS = allowCustomMobs;
-            ALLOW_SCROLL_TP = allowScrollTP;
-            ALLOW_DROPS = allowCustomDrops;
-            MOB_THRESHOLD = mobLevelThreshold;
-        } catch (FlagConflictException e) {
-            this.getLogger().warning("Failed to register some flags!");
-        }
     }
 
     public void loadYMLFiles() {
