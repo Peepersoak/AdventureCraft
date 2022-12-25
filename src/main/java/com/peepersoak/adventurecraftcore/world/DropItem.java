@@ -1,5 +1,6 @@
 package com.peepersoak.adventurecraftcore.world;
 
+import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.enchantment.ItemFactory;
 import com.peepersoak.adventurecraftcore.items.arrows.ArrowFactory;
 import com.peepersoak.adventurecraftcore.items.scrolls.ScrollFactory;
@@ -35,7 +36,9 @@ public class DropItem implements Listener {
             if (level == null || level < 5) return;
 
             Location location = e.getEntity().getLocation();
-            if (Objects.requireNonNull(location.getWorld()).getEnvironment() != World.Environment.NORMAL) return;
+
+            if (!Utils.checkWGState(monster, AdventureCraftCore.ALLOW_DROPS)) return;
+
             Utils.dropItem(scrollFactory.createScroll(), 5, location);
             Utils.dropItem(wardFactory.createWard(), 5, location);
             Utils.dropItem(arrowFactory.createArrow(), 5, location);

@@ -35,7 +35,12 @@ public class Skill {
 				String[] lore = ChatColor.stripColor(loreName).split(":");
 				int level = 1;
 				if (lore.length > 1) {
-					level = Integer.parseInt(lore[1].trim());
+					try {
+						level = Integer.parseInt(lore[1].trim());
+					} catch (NumberFormatException e) {
+						level = 0;
+						//
+					}
 				}
 				this.loreName.add(lore[0]);
 				loreMap.put(lore[0], level);

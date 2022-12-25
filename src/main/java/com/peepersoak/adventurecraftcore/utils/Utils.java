@@ -4,16 +4,20 @@ import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.combat.levelmobs.MobFactory;
 import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.variation.AggresiveVirusZombie;
 import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.variation.BoomerZombie;
+import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldguard.WorldGuard;
+import com.sk89q.worldguard.protection.ApplicableRegionSet;
+import com.sk89q.worldguard.protection.flags.IntegerFlag;
+import com.sk89q.worldguard.protection.flags.StateFlag;
+import com.sk89q.worldguard.protection.regions.RegionContainer;
+import com.sk89q.worldguard.protection.regions.RegionQuery;
 import net.minecraft.server.level.ServerLevel;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Zombie;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -141,5 +145,26 @@ public class Utils {
             return;
         }
         world.addFreshEntityWithPassengers(new AggresiveVirusZombie(location));
+    }
+
+    public static boolean checkWGState(Entity entity, StateFlag flag) {
+        com.sk89q.worldedit.util.Location location = new com.sk89q.worldedit.util.Location(BukkitAdapter.adapt(entity.getWorld()), entity.getLocation().getBlockX(), entity.getLocation().getBlockY(), entity.getLocation().getBlockZ());
+        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+        RegionQuery query = container.createQuery();
+        ApplicableRegionSet set = query.getApplicableRegions(location);
+
+        return set.testState(null, flag);
+    }
+
+    public static int getMobLevelThreshold(Entity entity, IntegerFlag flag) {
+        com.sk89q.worldedit.util.Location location = new com.sk89q.worldedit.util.Location(BukkitAdapter.adapt(entity.getWorld()), entity.getLocation().getBlockX(), entity.getLocation().getBlockY(), entity.getLocation().getBlockZ());
+        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+        RegionQuery query = container.createQuery();
+        ApplicableRegionSet set = query.getApplicableRegions(location);
+
+        Integer customThreshold = set.queryValue(null, flag);
+        int defaultThreshold = AdventureCraftCore.getInstance().getConfig().getInt(ConfigPath.DISTANCE_THRESHOLD);
+
+        return customThreshold == null ? defaultThreshold : customThreshold;
     }
 }

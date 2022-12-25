@@ -10,6 +10,7 @@ import com.peepersoak.adventurecraftcore.utils.EventHandler;
 import com.peepersoak.adventurecraftcore.utils.FileName;
 import com.peepersoak.adventurecraftcore.utils.OpenInventory;
 import com.sk89q.worldguard.WorldGuard;
+import com.sk89q.worldguard.protection.flags.IntegerFlag;
 import com.sk89q.worldguard.protection.flags.StateFlag;
 import com.sk89q.worldguard.protection.flags.registry.FlagConflictException;
 import com.sk89q.worldguard.protection.flags.registry.FlagRegistry;
@@ -24,19 +25,20 @@ import java.util.List;
 import java.util.Objects;
 
 public final class AdventureCraftCore extends JavaPlugin {
-
     private static Economy econ = null;
     public static StateFlag PRISON_FLAG;
     public static StateFlag ZOMBIE_BREAK;
     public static StateFlag LEVEL_MOBS;
     public static StateFlag ALLOW_CUSTOM_MOBS;
+    public static StateFlag ALLOW_SCROLL_TP;
+    public static StateFlag ALLOW_DROPS;
+    public static IntegerFlag MOB_THRESHOLD;
     private static AdventureCraftCore instance;
     private final EventHandler eventHandler = new EventHandler();
     private final CraftingHandler craftingHandler = new CraftingHandler();
     private final Nightmare nightmare = new Nightmare();
     private DungeonEvents dungeonEvents;
     private Data dungeonSetting;
-
 
     @Override
     public void onEnable() {
@@ -86,16 +88,25 @@ public final class AdventureCraftCore extends JavaPlugin {
             StateFlag allowBreakZombie = new StateFlag("allow-zombie-break", true);
             StateFlag allowLevelMobs = new StateFlag("allow-level-mobs", true);
             StateFlag allowCustomMobs = new StateFlag("allow-custom-mobs", true);
+            StateFlag allowScrollTP = new StateFlag("allow-scroll-tp", true);
+            StateFlag allowCustomDrops = new StateFlag("allow-custom-drops", true);
+            IntegerFlag mobLevelThreshold = new IntegerFlag("mob-threshold");
 
             registry.register(flag);
             registry.register(allowBreakZombie);
             registry.register(allowLevelMobs);
             registry.register(allowCustomMobs);
+            registry.register(allowScrollTP);
+            registry.register(allowCustomDrops);
+            registry.register(mobLevelThreshold);
 
             PRISON_FLAG = flag;
             ZOMBIE_BREAK = allowBreakZombie;
             LEVEL_MOBS = allowLevelMobs;
             ALLOW_CUSTOM_MOBS = allowCustomMobs;
+            ALLOW_SCROLL_TP = allowScrollTP;
+            ALLOW_DROPS = allowCustomDrops;
+            MOB_THRESHOLD = mobLevelThreshold;
         } catch (FlagConflictException e) {
             this.getLogger().warning("Failed to register some flags!");
         }

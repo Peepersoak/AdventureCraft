@@ -77,12 +77,7 @@ public class DestroyBlock extends BukkitRunnable {
 
     @Override
     public void run() {
-        Location location = new Location(BukkitAdapter.adapt(entity.getWorld()), entity.getLocation().getBlockX(), entity.getLocation().getBlockY(), entity.getLocation().getBlockZ());
-        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
-        RegionQuery query = container.createQuery();
-        ApplicableRegionSet set = query.getApplicableRegions(location);
-        if (!set.testState(null, AdventureCraftCore.ZOMBIE_BREAK)) return;
-
+        if (!Utils.checkWGState(entity, AdventureCraftCore.ZOMBIE_BREAK)) return;
         getBlock();
         if (this.entity.isDead()) this.cancel();
     }

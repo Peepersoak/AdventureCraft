@@ -62,6 +62,7 @@ public class ScrollEvents implements Listener {
 
         switch (type) {
             case TELEPORT -> {
+                if (!Utils.checkWGState(player, AdventureCraftCore.ALLOW_SCROLL_TP)) return;
                 Location bedSpawn = player.getBedSpawnLocation();
                 if (bedSpawn != null) {
                     consumeItem(e.getItem(), player);
@@ -83,11 +84,13 @@ public class ScrollEvents implements Listener {
             }
 
             case ACCOMPANY -> {
+                if (!Utils.checkWGState(player, AdventureCraftCore.ALLOW_SCROLL_TP)) return;
                 openTeleportGUI(player, false);
                 consumeItem(e.getItem(), player);
             }
 
             case MAGNETIC_FORCE -> {
+                if (!Utils.checkWGState(player, AdventureCraftCore.ALLOW_SCROLL_TP)) return;
                 openTeleportGUI(player, true);
                 consumeItem(e.getItem(), player);
             }

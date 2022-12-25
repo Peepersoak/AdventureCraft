@@ -22,19 +22,19 @@ public class MainSpawnEvent implements Listener {
     public void onSpawn(CreatureSpawnEvent e) {
         if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER) return;
         if (e.getEntity() instanceof Zombie zombie && zombie.getType() == EntityType.ZOMBIE) {
-            if (!allowCustomMobs(zombie)) return;
+            if (!Utils.checkWGState(zombie, AdventureCraftCore.ALLOW_CUSTOM_MOBS)) return;
             if (Utils.getPDC(zombie).has(StringPath.CUSTOM_ZOMBIE, PersistentDataType.STRING)) return;
             Utils.spawnRandomZombie(zombie.getLocation());
             e.setCancelled(true);
             return;
         }
         if (!(e.getEntity() instanceof Monster monster)) {
-            if (!allowCustomMobs(e.getEntity())) return;
+            if (!Utils.checkWGState(e.getEntity(), AdventureCraftCore.ALLOW_CUSTOM_MOBS)) return;
             registerNonMonsterMobs(e.getEntity());
             return;
         }
         if (e.getEntity().getPersistentDataContainer().has(StringPath.WARD_WITCH, PersistentDataType.STRING)) return;
-        if (allowCustomMobs(e.getEntity())) {
+        if (Utils.checkWGState(e.getEntity(), AdventureCraftCore.ALLOW_CUSTOM_MOBS)) return; {
             new MobFactory(monster);
         }
     }
@@ -43,13 +43,5 @@ public class MainSpawnEvent implements Listener {
         if (entity instanceof Hoglin || entity instanceof Zoglin) {
             new MobFactory(entity);
         }
-    }
-
-    private boolean allowCustomMobs(Entity entity) {
-        com.sk89q.worldedit.util.Location location = new com.sk89q.worldedit.util.Location(BukkitAdapter.adapt(entity.getWorld()), entity.getLocation().getBlockX(), entity.getLocation().getBlockY(), entity.getLocation().getBlockZ());
-        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
-        RegionQuery query = container.createQuery();
-        ApplicableRegionSet set = query.getApplicableRegions(location);
-        return set.testState(null, AdventureCraftCore.ALLOW_CUSTOM_MOBS);
     }
 }

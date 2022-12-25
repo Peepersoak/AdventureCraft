@@ -115,16 +115,12 @@ public class MobFactory {
     }
 
     private void setLevel() {
-        com.sk89q.worldedit.util.Location location = new com.sk89q.worldedit.util.Location(BukkitAdapter.adapt(entity.getWorld()), entity.getLocation().getBlockX(), entity.getLocation().getBlockY(), entity.getLocation().getBlockZ());
-        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
-        RegionQuery query = container.createQuery();
-        ApplicableRegionSet set = query.getApplicableRegions(location);
-        if (!set.testState(null, AdventureCraftCore.LEVEL_MOBS)) {
+        if (!Utils.checkWGState(entity, AdventureCraftCore.LEVEL_MOBS)) {
             this.level = 0;
             return;
-        }
+        };
 
-        int threshold = AdventureCraftCore.getInstance().getConfig().getInt(ConfigPath.DISTANCE_THRESHOLD);
+        int threshold = Utils.getMobLevelThreshold(entity, AdventureCraftCore.MOB_THRESHOLD);
 
         if (entity.getWorld().getEnvironment() == World.Environment.NETHER) {
             threshold /= 8;
