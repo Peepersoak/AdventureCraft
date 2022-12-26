@@ -4,6 +4,8 @@ import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.enchantment.crafting.Book;
 import com.peepersoak.adventurecraftcore.enchantment.crafting.MainItem;
 import com.peepersoak.adventurecraftcore.enchantment.crafting.Result;
+import com.peepersoak.adventurecraftcore.utils.Flags;
+import com.peepersoak.adventurecraftcore.utils.Utils;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
@@ -118,8 +120,10 @@ public class AnvilCraft implements Listener {
 					result.setItemLore(newLore);
 				}
 				if (allowEnchant) {
-					e.setResult(result.createItem());
-					AdventureCraftCore.getInstance().getServer().getScheduler().runTask(AdventureCraftCore.getInstance(), () -> e.getInventory().setRepairCost(30));
+					if (Utils.checkWGState(e.getView().getPlayer(), Flags.ALLOW_CUSTOM_CRAFT_ENCHANT)) {
+						e.setResult(result.createItem());
+						AdventureCraftCore.getInstance().getServer().getScheduler().runTask(AdventureCraftCore.getInstance(), () -> e.getInventory().setRepairCost(30));
+					}
 				}
 			}
 		}

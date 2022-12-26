@@ -2,6 +2,8 @@ package com.peepersoak.adventurecraftcore.enchantment.crafting.events;
 
 import com.peepersoak.adventurecraftcore.enchantment.crafting.CraftingResultBook;
 import com.peepersoak.adventurecraftcore.enchantment.crafting.Paper;
+import com.peepersoak.adventurecraftcore.utils.Flags;
+import com.peepersoak.adventurecraftcore.utils.Utils;
 import org.bukkit.Material;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -88,16 +90,22 @@ public class CraftingTableCraft implements Listener {
 			e.getInventory().setResult(book.createBook("Normal"));
 		}
 		else if (leather == 1 && paperCount == 0 && normal == 3 && custom == 0 & skill == 0) {
-			book.setItemMeta(lockPaper);
-			e.getInventory().setResult(book.createBook("Enchant Scripture"));
+			if (Utils.checkWGState(e.getView().getPlayer(), Flags.ALLOW_CUSTOM_CRAFT_ENCHANT)) {
+				book.setItemMeta(lockPaper);
+				e.getInventory().setResult(book.createBook("Enchant Scripture"));
+			}
 		}
 		else if (leather == 1 && paperCount == 0 && normal == 0 && custom == 3 & skill == 0) {
-			book.setItemMeta(lockPaper);
-			e.getInventory().setResult(book.createBook("Forbidden Scripture"));
+			if (Utils.checkWGState(e.getView().getPlayer(), Flags.ALLOW_CUSTOM_CRAFT_ENCHANT)) {
+				book.setItemMeta(lockPaper);
+				e.getInventory().setResult(book.createBook("Forbidden Scripture"));
+			}
 		}
 		else if (leather == 1 && paperCount == 0 && normal == 0 && custom == 0 & skill == 3) {
-			book.setItemMeta(lockPaper);
-			e.getInventory().setResult(book.createBook("Forgotten Scripture"));
+			if (Utils.checkWGState(e.getView().getPlayer(), Flags.ALLOW_CUSTOM_CRAFT_ENCHANT)) {
+				book.setItemMeta(lockPaper);
+				e.getInventory().setResult(book.createBook("Forgotten Scripture"));
+			}
 		}
 	}
 }

@@ -26,6 +26,8 @@ public class WorldFlags {
             StateFlag allowDungeons = new StateFlag("allow-dungeons", true);
             StateFlag allowDungeonSpawnerOnly = new StateFlag("dungeon-spawner-only", false);
             StateFlag allowDungeonLife = new StateFlag("use-dungeon-life", false);
+            StateFlag allowBoomerDestroy = new StateFlag("allow-boomer-destroy", true);
+            StateFlag allowCusCraftEnchant = new StateFlag("allow-custom-craft-enchant", true);
 
             IntegerFlag mobLevelThreshold = new IntegerFlag("mob-threshold");
             IntegerFlag normalEnchantChance = new IntegerFlag("normal-enchant-chance");
@@ -45,6 +47,8 @@ public class WorldFlags {
             registry.register(allowDungeons);
             registry.register(allowDungeonSpawnerOnly);
             registry.register(allowDungeonLife);
+            registry.register(allowBoomerDestroy);
+            registry.register(allowCusCraftEnchant);
 
             registry.register(maxEntityCount);
             registry.register(mobLevelThreshold);
@@ -72,6 +76,8 @@ public class WorldFlags {
             Flags.ARROW_CHANCE = arrowChance;
             Flags.DUNGEON_SPAWNER_ONLY = allowDungeonSpawnerOnly;
             Flags.ALLOW_DUNGEON_LIFE = allowDungeonLife;
+            Flags.BOOMER_BLOCK_DESTROY = allowBoomerDestroy;
+            Flags.ALLOW_CUSTOM_CRAFT_ENCHANT = allowCusCraftEnchant;
         } catch (FlagConflictException e) {
             AdventureCraftCore.getInstance().getLogger().warning("Failed to register some flags!");
         }

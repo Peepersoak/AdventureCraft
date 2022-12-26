@@ -17,7 +17,7 @@ public class EventHandler {
     public void registerEvents(AdventureCraftCore instance, PluginManager pm) {
         pm.registerEvents(new ZombieEvents(), instance);
         pm.registerEvents(new CreeperEvents(), instance);
-        pm.registerEvents(new SkeletonEvent(), instance);
+        pm.registerEvents(new ProjectileEvents(), instance);
         pm.registerEvents(new MainSpawnEvent(), instance);
         pm.registerEvents(new SpiderEvents(), instance);
         pm.registerEvents(new PhantomEvent(), instance);

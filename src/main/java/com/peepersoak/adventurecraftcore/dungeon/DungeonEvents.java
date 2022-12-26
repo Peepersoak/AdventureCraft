@@ -242,6 +242,8 @@ public class DungeonEvents implements CommandExecutor, Listener {
             return;
         }
 
+        if (!Utils.checkWGState(e.getEntity(), Flags.LEVEL_MOBS)) return;
+
         if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER && Utils.checkWGState(e.getEntity(), Flags.DUNGEON_SPAWNER_ONLY)) {
             int minLevel = 0;
             int maxLevel = playerUUID.size() * 5;
@@ -255,7 +257,11 @@ public class DungeonEvents implements CommandExecutor, Listener {
             LivingEntity entity = (LivingEntity) world.spawnEntity(location, mobType.get(0));
             new MobFactory(entity, mobLevel);
             maxEntityCount++;
+
+            return;
         }
+
+        new MobFactory(e.getEntity());
     }
 
     @EventHandler
@@ -427,7 +433,7 @@ public class DungeonEvents implements CommandExecutor, Listener {
                     return;
                 }
                 if (count == 10) {
-                    player.sendMessage(Utils.color("&Exiting the dungeon in 10 seconds!"));
+                    player.sendMessage(Utils.color("&4Exiting the dungeon in 10 seconds!"));
                 } else {
                     player.sendMessage(Utils.color("&c" + count));
                 }

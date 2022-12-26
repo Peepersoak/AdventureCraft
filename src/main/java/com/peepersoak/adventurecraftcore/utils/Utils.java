@@ -12,12 +12,10 @@ import com.sk89q.worldguard.protection.flags.StateFlag;
 import com.sk89q.worldguard.protection.regions.RegionContainer;
 import com.sk89q.worldguard.protection.regions.RegionQuery;
 import net.minecraft.server.level.ServerLevel;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.entity.*;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -177,5 +175,22 @@ public class Utils {
         Integer customValue = set.queryValue(null, flag);
 
         return customValue != null ? customValue : -1;
+    }
+
+    public static void setProjectileDamage(LivingEntity mob, EntityDamageByEntityEvent e) {
+        Integer level = Utils.getPDC(mob).get(StringPath.MOB_LEVEL_KEY, PersistentDataType.INTEGER);
+        level = level != null ? level : 0;
+
+        double additionDamage = AdventureCraftCore.getInstance().getConfig().getDouble(ConfigPath.DAMAGE_MULTIPLIER) * level;
+
+        if (e.getEntity() instanceof Ghast) {
+            e.setDamage(e.getDamage() + additionDamage);
+        }
+        else if (e.getEntity() instanceof Skeleton) {
+            e.setDamage(e.getDamage() + additionDamage);
+        }
+        else if (e.getEntity() instanceof Blaze) {
+            e.setDamage(e.getDamage() + additionDamage);
+        }
     }
 }

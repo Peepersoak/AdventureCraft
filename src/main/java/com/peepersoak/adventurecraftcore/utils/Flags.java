@@ -13,6 +13,8 @@ public class Flags {
     public static StateFlag ENABLE_DUNGEON;
     public static StateFlag DUNGEON_SPAWNER_ONLY;
     public static StateFlag ALLOW_DUNGEON_LIFE;
+    public static StateFlag BOOMER_BLOCK_DESTROY;
+    public static StateFlag ALLOW_CUSTOM_CRAFT_ENCHANT;
     public static IntegerFlag MOB_THRESHOLD;
     public static IntegerFlag MAX_ENTITY_COUNT;
     public static IntegerFlag SCROLL_CHANCE;
@@ -21,5 +23,6 @@ public class Flags {
     public static IntegerFlag NORMAL_ENCHANT_CHANCE;
     public static IntegerFlag CUSTOM_ENCHANT_CHANCE;
     public static IntegerFlag SKILL_ENCHANT_CHANCE;
+
 
 }

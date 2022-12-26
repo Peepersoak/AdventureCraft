@@ -5,6 +5,7 @@ import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.ZombieType;
 import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.variation.AggresiveVirusZombie;
 import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.variation.BoomerZombie;
 import com.peepersoak.adventurecraftcore.enchantment.skills.Skill;
+import com.peepersoak.adventurecraftcore.utils.Flags;
 import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
 import net.minecraft.server.level.ServerLevel;
@@ -147,6 +148,6 @@ public class ZombieEvents implements Listener {
     private void explodeZombie(Zombie zombie) {
         Location location = zombie.getLocation();
         zombie.remove();
-        zombie.getWorld().createExplosion(location, 4.0F);
+        zombie.getWorld().createExplosion(location, 4.0F, false, Utils.checkWGState(zombie, Flags.BOOMER_BLOCK_DESTROY));
     }
 }
