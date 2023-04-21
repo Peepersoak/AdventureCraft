@@ -9,6 +9,7 @@ import com.peepersoak.adventurecraftcore.utils.Flags;
 import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Container;
 import org.bukkit.block.CreatureSpawner;
@@ -20,13 +21,12 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemFlag;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -64,9 +64,14 @@ public class DungeonEvents implements CommandExecutor, Listener {
             dungeonCoin.setItemMeta(meta);
         }
 
-        spawnBoss();
-        updateEntityCount();
+        runEntityCounter();
         createDungeonLife();
+
+        BOSS_TYPE.add(EntityType.RAVAGER);
+        BOSS_TYPE.add(EntityType.ILLUSIONER);
+        BOSS_TYPE.add(EntityType.ZOMBIE);
+        BOSS_TYPE.add(EntityType.WARDEN);
+        BOSS_TYPE.add(EntityType.WITHER);
     }
 
     private final World dungeonWorld;
@@ -87,8 +92,9 @@ public class DungeonEvents implements CommandExecutor, Listener {
     private int maxEntityCount = 0;
     private final ItemStack dungeonCoin = new ItemStack(Material.SUNFLOWER);
     private ItemStack dungeonLife;
-    private Location bossSpawnLocation;
     private final NamespacedKey BOSS_PERSISTENT_DATA = new NamespacedKey(AdventureCraftCore.getInstance(), "BossData");
+    private final List<EntityType> BOSS_TYPE = new ArrayList<>();
+    private boolean hasBoss = false;
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -133,6 +139,8 @@ public class DungeonEvents implements CommandExecutor, Listener {
 
             if (cmd.equalsIgnoreCase("reset")) {
                 maxEntityCount = 0;
+                removeAllEntities();
+                hasBoss = false;
                 player.sendMessage(Utils.color("&6Dungeon has been reset"));
             }
         }
@@ -175,7 +183,10 @@ public class DungeonEvents implements CommandExecutor, Listener {
             }
 
             if (cmd.equalsIgnoreCase("tp")) {
-                player.teleport(Objects.requireNonNull(Bukkit.getWorld(type)).getSpawnLocation());
+                World world = Bukkit.getWorld(type);
+                if (world != null) {
+                    player.teleport(world.getSpawnLocation());
+                }
             }
         }
         return false;
@@ -232,11 +243,27 @@ public class DungeonEvents implements CommandExecutor, Listener {
 
     @EventHandler
     public void onSpawn(CreatureSpawnEvent e) {
+        if (!Utils.checkWGState(e.getEntity(), Flags.IS_DUNGEON_WORLD)) return;
+        if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) return;
+        if (e.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) return;
+        if (!(e.getEntity() instanceof Monster)) return;
+
         final Location location = e.getLocation();
         final World world = location.getWorld();
         if (world == null || world != dungeonWorld) return;
 
-        if (!Utils.checkWGState(e.getEntity(), Flags.ENABLE_DUNGEON)) {
+        if (Utils.getPDC(e.getEntity()).has(StringPath.MOB_LEVEL_KEY, PersistentDataType.INTEGER)) return;
+
+        int MAX_ENTITY = Utils.getWorldGuardValue(e.getEntity(), Flags.MAX_ENTITY_COUNT);
+        MAX_ENTITY = MAX_ENTITY == -1 ? 200 : MAX_ENTITY;
+        if (!Utils.checkWGState(e.getEntity(), Flags.ENABLE_DUNGEON)
+                || maxEntityCount > MAX_ENTITY) {
+            e.getEntity().remove();
+            e.setCancelled(true);
+            return;
+        }
+
+        if (location.getBlock().getLightFromSky() == 0 && !Utils.checkWGState(e.getEntity(), Flags.ALLOW_MOBS_ON_CAVES)) {
             e.getEntity().remove();
             e.setCancelled(true);
             return;
@@ -251,8 +278,6 @@ public class DungeonEvents implements CommandExecutor, Listener {
 
             e.getEntity().remove();
 
-            int MAX_ENTITY = 200;
-            if (maxEntityCount > MAX_ENTITY) return;
             Collections.shuffle(mobType);
             LivingEntity entity = (LivingEntity) world.spawnEntity(location, mobType.get(0));
             new MobFactory(entity, mobLevel);
@@ -261,15 +286,35 @@ public class DungeonEvents implements CommandExecutor, Listener {
             return;
         }
 
-        new MobFactory(e.getEntity());
+        int bossChance = Utils.getWorldGuardValue(e.getEntity(), Flags.DUNGEON_BOSS_SPAWN_CHANCE);
+        bossChance = bossChance == -1 ? 10 : bossChance;
+
+        if (Utils.getRandom(2000) < bossChance && !hasBoss) {
+            spawnBoss(location, e.getEntity());
+        } else {
+            if (e.getEntity() instanceof Zombie) {
+                Utils.spawnRandomZombie(location);
+                e.getEntity().remove();
+                e.setCancelled(true);
+            } else {
+                new MobFactory(e.getEntity());
+            }
+        }
     }
 
     @EventHandler
     public void onDeath(EntityDeathEvent e) {
         if (e.getEntity().getWorld() != dungeonWorld) return;
         if (e.getEntity() instanceof Player) return;
+        if (!(e.getEntity() instanceof Monster)) return;
+        if (!(e.getEntity().getLastDamageCause() instanceof EntityDamageByEntityEvent event)) return;
+        if (event.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK) return;
+        if (!(event.getDamager() instanceof Player player)) return;
 
         if (Utils.getPDC(e.getEntity()).has(BOSS_PERSISTENT_DATA, PersistentDataType.INTEGER)) {
+            hasBoss = false;
+
+            e.getDrops().clear();
             if (chestLootList.size() == 0) return;
             int itemAmount = Utils.getRandom(10,5);
 
@@ -279,7 +324,7 @@ public class DungeonEvents implements CommandExecutor, Listener {
             for (int i = 0; i < itemAmount; i++) {
                 Collections.shuffle(chestLootList);
                 ItemStack item = createLootItem(chestLootList.get(0), true);
-                dungeonWorld.dropItemNaturally(e.getEntity().getLocation(), item);
+                e.getDrops().add(item);
             }
 
             return;
@@ -290,11 +335,23 @@ public class DungeonEvents implements CommandExecutor, Listener {
         int xpAmount = Utils.getRandom(1000, 100);
         e.setDroppedExp(xpAmount);
 
-        if (Utils.getRandom(100) < 25) {
-            e.getDrops().add(dungeonCoin);
+//        if (Utils.getRandom(100) < 25) {
+//            e.getDrops().add(dungeonCoin);
+//        }
+
+        Integer level = Utils.getPDC(e.getEntity()).get(StringPath.MOB_LEVEL_KEY, PersistentDataType.INTEGER);
+        if (level != null) {
+            double maxAmount = Math.max(1, level) * 10;
+            double minAmount = maxAmount / 2;
+
+            double amount = Utils.getRandomDouble(maxAmount, minAmount);
+            amount = Math.round(amount * 100.0) / 100.0;
+
+            AdventureCraftCore.getEconomy().depositPlayer(player, amount);
+            player.sendMessage(Utils.color("&8You earned &6" + amount));
         }
 
-        int itemAmount = Utils.getRandom(5, 1);
+        double itemAmount = Utils.getRandom(5, 1);
         if (mobsLootList.size() == 0) return;
         for (int i = 0; i < itemAmount; i++) {
             Collections.shuffle(mobsLootList);
@@ -310,7 +367,7 @@ public class DungeonEvents implements CommandExecutor, Listener {
         if (!Utils.checkWGState(player, Flags.ALLOW_DUNGEON_LIFE)) return;
         if (e.getFinalDamage() >= player.getHealth()) {
             Inventory inv = player.getInventory();
-            HashMap<Integer, ? extends ItemStack> map = inv.all(dungeonLife.getType());
+            HashMap<Integer, ? extends ItemStack> map = inv.all(Material.TOTEM_OF_UNDYING);
 
             for (Integer index : map.keySet()) {
                 ItemStack item = inv.getItem(index);
@@ -322,6 +379,7 @@ public class DungeonEvents implements CommandExecutor, Listener {
                     else inv.setItem(index, null);
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "warp " + dungeonWorld.getName() + " " + player.getName());
                     player.sendMessage(Utils.color("&4Your &6straw doll &4has been consumed!"));
+                    player.setHealth(Objects.requireNonNull(player.getAttribute(Attribute.GENERIC_MAX_HEALTH)).getBaseValue());
                     break;
                 }
             }
@@ -367,6 +425,7 @@ public class DungeonEvents implements CommandExecutor, Listener {
         int itemCountMin = 1;
         int itemCountMax = 10;
         int itemCount = Utils.getRandom(itemCountMax, itemCountMin);
+        if (chestLootList.size() == 0) return;
         for (int i = 0; i < itemCount; i++) {
             Collections.shuffle(chestLootList);
             int slot = Utils.getRandom(inv.getSize() - 1);
@@ -389,6 +448,23 @@ public class DungeonEvents implements CommandExecutor, Listener {
                 }
             }
         }.runTaskTimer(AdventureCraftCore.getInstance(), 0, 100);
+    }
+
+    private void runEntityCounter() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (dungeonWorld == null) return;
+                int count = 0;
+                for (Entity entity : dungeonWorld.getEntities()) {
+                    if (entity instanceof Monster) count++;
+                    if (entity instanceof LivingEntity e) {
+                        if (Utils.getPDC(e).has(BOSS_PERSISTENT_DATA, PersistentDataType.INTEGER)) hasBoss = true;
+                    }
+                }
+                maxEntityCount = count;
+            }
+        }.runTaskTimer(AdventureCraftCore.getInstance(), 0, 20);
     }
 
     private void saveItemStack(List<ItemStack> list,String path) {
@@ -455,7 +531,7 @@ public class DungeonEvents implements CommandExecutor, Listener {
             item = arrowFactory.createArrow();
         }
         else if (item.getType() == Material.SUNFLOWER && Utils.getRandom(100) < 15) {
-            item = dungeonCoin;
+//            item = dungeonCoin;
         }
         else {
             enchantItem(item);
@@ -495,18 +571,37 @@ public class DungeonEvents implements CommandExecutor, Listener {
         spawner.update();
     }
 
-    private void spawnBoss() {
-        String rawLocation = AdventureCraftCore.getInstance().getDungeonSetting().getConfig().getString(DungeonSettings.BOSS_SPAWN);
-        if (rawLocation == null) return;
-        bossSpawnLocation = (Location) Utils.deserialized(rawLocation);
-        if (bossSpawnLocation == null) return;
-        int level = Math.max((Math.max(playerUUID.size(), 1) * 5) * 2, 20);
+    private void spawnBoss(Location location, LivingEntity entity) {
+        int min = Utils.getWorldGuardValue(entity, Flags.BOSS_MINIMUM_LEVEL);
+        int max = Utils.getWorldGuardValue(entity, Flags.BOSS_MAXIMUM_LEVEL);
 
-        Ravager ravager = (Ravager) dungeonWorld.spawnEntity(bossSpawnLocation, EntityType.RAVAGER);
-        Evoker evoker = (Evoker) dungeonWorld.spawnEntity(bossSpawnLocation, EntityType.EVOKER);
+        if (dungeonWorld.getSpawnLocation().distance(location) <= 1500) return;
+        hasBoss = true;
+        System.out.println(location.getX() + " " + location.getY() + " " + location.getZ());
+
+        entity.remove();
+
+        min = min == -1 ? 50 : min;
+        max = max == -1 ? 100 : max;
+
+        int bossLevel = Utils.getRandom(max, min);
+
+        Collections.shuffle(BOSS_TYPE);
+        switch (BOSS_TYPE.get(0)) {
+            case RAVAGER -> spawnBossRavager(location, bossLevel);
+            case ILLUSIONER -> spawnBossIllusioner(location, bossLevel);
+            case ZOMBIE -> spawnBossZombie(location, bossLevel);
+            case WARDEN -> spawnBossWarden(location, bossLevel);
+            case WITHER -> spawnBossWither(location, bossLevel);
+        }
+    }
+
+    private void spawnBossRavager(Location location, int level) {
+        Ravager ravager = (Ravager) dungeonWorld.spawnEntity(location, EntityType.RAVAGER);
+        Evoker evoker = (Evoker) dungeonWorld.spawnEntity(location, EntityType.EVOKER);
 
         Utils.getPDC(ravager).set(BOSS_PERSISTENT_DATA, PersistentDataType.INTEGER, 1);
-        Utils.getPDC(evoker).set(BOSS_PERSISTENT_DATA, PersistentDataType.INTEGER, 2);
+        Utils.getPDC(evoker).set(BOSS_PERSISTENT_DATA, PersistentDataType.INTEGER, 1);
 
         ravager.setRemoveWhenFarAway(false);
         evoker.setRemoveWhenFarAway(false);
@@ -516,45 +611,65 @@ public class DungeonEvents implements CommandExecutor, Listener {
 
         ravager.setCustomName(Utils.color("&4Inuarashi"));
         evoker.setCustomName(Utils.color("&4Im"));
-
         ravager.addPassenger(evoker);
-
-        updateBoss(ravager, evoker);
     }
 
-    private void updateBoss(Ravager ravager, Evoker evoker) {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (evoker.isDead() && ravager.isDead()) {
-                    this.cancel();
-                    return;
-                }
-                double distance = ravager.getLocation().distance(bossSpawnLocation);
-                if (distance > 10) {
-                    ravager.remove();
-                    evoker.remove();
-                    spawnBoss();
-                }
-            }
-        }.runTaskTimer(AdventureCraftCore.getInstance(), 0, 20);
+    private void spawnBossIllusioner(Location location, int level) {
+        Illusioner illusioner = (Illusioner) dungeonWorld.spawnEntity(location, EntityType.ILLUSIONER);
+        Evoker evoker = (Evoker) dungeonWorld.spawnEntity(location, EntityType.EVOKER);
+
+        Utils.getPDC(illusioner).set(BOSS_PERSISTENT_DATA, PersistentDataType.INTEGER, 1);
+        Utils.getPDC(evoker).set(BOSS_PERSISTENT_DATA, PersistentDataType.INTEGER, 1);
+
+        illusioner.setRemoveWhenFarAway(false);
+        evoker.setRemoveWhenFarAway(false);
+
+        new MobFactory(illusioner, level);
+        new MobFactory(evoker, level);
+
+        illusioner.setCustomName(Utils.color("&4Magician"));
+        evoker.setCustomName(Utils.color("&4Magician Assistant"));
+
+        illusioner.addPassenger(evoker);
     }
 
-    private void updateEntityCount() {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (dungeonWorld == null) return;
-                int count = 0;
-                for (Entity entity : dungeonWorld.getEntities()) {
-                    if (mobType.contains(entity.getType())) {
-                        count++;
-                    }
-                }
-                maxEntityCount = count;
-            }
-        }.runTaskTimer(AdventureCraftCore.getInstance(), 0, 20);
-    }
+    private void spawnBossZombie(Location location, int level) {
+        Zombie zombie = (Zombie) dungeonWorld.spawnEntity(location, EntityType.ZOMBIE);
+
+        Utils.getPDC(zombie).set(BOSS_PERSISTENT_DATA, PersistentDataType.INTEGER, 1);
+        zombie.setBaby();
+        zombie.setRemoveWhenFarAway(false);
+
+        EntityEquipment equipment = zombie.getEquipment();
+
+        if (equipment != null) {
+            equipment.setHelmet(giveAllEnchant(new ItemStack(Material.NETHERITE_HELMET)));
+            equipment.setChestplate(giveAllEnchant(new ItemStack(Material.NETHERITE_CHESTPLATE)));
+            equipment.setLeggings(giveAllEnchant(new ItemStack(Material.NETHERITE_LEGGINGS)));
+            equipment.setBoots(giveAllEnchant(new ItemStack(Material.NETHERITE_BOOTS)));
+            equipment.setItemInMainHand(giveAllEnchant(new ItemStack(Material.NETHERITE_AXE)));
+            equipment.setItemInOffHand(giveAllEnchant(new ItemStack(Material.NETHERITE_SWORD)));
+        }
+
+        new MobFactory(zombie, level);
+        zombie.setCustomName(Utils.color("&4B4by Z0mb1e"));
+    };
+
+    private void spawnBossWarden(Location location, int level) {
+        Warden warden = (Warden) dungeonWorld.spawnEntity(location, EntityType.WARDEN);
+        Utils.getPDC(warden).set(BOSS_PERSISTENT_DATA, PersistentDataType.INTEGER, 1);
+        warden.setRemoveWhenFarAway(false);
+        new MobFactory(warden, level);
+        warden.setCustomName(Utils.color("&4Hells Guard"));
+    };
+
+    private void spawnBossWither(Location location, int level) {
+        Wither wither = (Wither) dungeonWorld.spawnEntity(location, EntityType.WITHER);
+        Utils.getPDC(wither).set(BOSS_PERSISTENT_DATA, PersistentDataType.INTEGER, 1);
+        wither.setRemoveWhenFarAway(false);
+        new MobFactory(wither, level);
+        wither.setCustomName(Utils.color("&4FALLEN ANGEL"));
+    };
 
     private void createDungeonLife() {
         ItemStack item = new ItemStack(Material.TOTEM_OF_UNDYING);
@@ -581,6 +696,14 @@ public class DungeonEvents implements CommandExecutor, Listener {
 
         dungeonLife = item;
     }
+
+    private ItemStack giveAllEnchant(ItemStack item) {
+        for (Enchantment enchantment : Enchantment.values()) {
+            if (enchantment.canEnchantItem(item)) item.addUnsafeEnchantment(enchantment, enchantment.getMaxLevel());
+        }
+        return item;
+    }
+
 
     public void removeAllEntities() {
         List<Entity> list = dungeonWorld.getEntities();

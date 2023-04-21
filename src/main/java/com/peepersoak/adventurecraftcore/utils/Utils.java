@@ -13,7 +13,7 @@ import com.sk89q.worldguard.protection.regions.RegionContainer;
 import com.sk89q.worldguard.protection.regions.RegionQuery;
 import net.minecraft.server.level.ServerLevel;
 import org.bukkit.*;
-import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R2.CraftWorld;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.inventory.ItemStack;
@@ -61,6 +61,10 @@ public class Utils {
 
     public static int getRandom(int max, int min) {
         return rand.nextInt(max - min) + min;
+    }
+
+    public static double getRandomDouble(double max, double min) {
+        return rand.nextDouble(max - min) + min;
     }
 
     public static void zombieLevelUp(Zombie zombie) {
@@ -183,13 +187,13 @@ public class Utils {
 
         double additionDamage = AdventureCraftCore.getInstance().getConfig().getDouble(ConfigPath.DAMAGE_MULTIPLIER) * level;
 
-        if (e.getEntity() instanceof Ghast) {
+        if (mob instanceof Ghast) {
             e.setDamage(e.getDamage() + additionDamage);
         }
-        else if (e.getEntity() instanceof Skeleton) {
+        else if (mob instanceof Skeleton) {
             e.setDamage(e.getDamage() + additionDamage);
         }
-        else if (e.getEntity() instanceof Blaze) {
+        else if (mob instanceof Blaze) {
             e.setDamage(e.getDamage() + additionDamage);
         }
     }

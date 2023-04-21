@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerLevel;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R2.CraftWorld;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -84,7 +84,7 @@ public class ZombieEvents implements Listener {
 
         Skill skill = new Skill();
         skill.setItem(item);
-        if (skill.getLoreName() == null || skill.getLoreName().contains("SOUL BOUND")) return;
+        if (skill.getLoreName() != null && skill.getLoreName().contains("SOUL BOUND")) return;
 
         String material = item.getType().toString().toLowerCase();
         ItemStack air = new ItemStack(Material.AIR);

@@ -93,6 +93,10 @@ public class Data {
         return true;
     }
 
+    public void addNewList(String path, List<String> listToAdd) {
+        config.set(path, listToAdd);
+        saveConfig();
+    }
     public void removeToList(String path, String value) {
         List<String> list = config.getStringList(path);
         list.remove(value);

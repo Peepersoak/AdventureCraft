@@ -5,6 +5,7 @@ import com.peepersoak.adventurecraftcore.commands.*;
 import com.peepersoak.adventurecraftcore.dungeon.DungeonEvents;
 import com.peepersoak.adventurecraftcore.dungeon.DungeonSettings;
 import com.peepersoak.adventurecraftcore.enchantment.crafting.events.CraftingHandler;
+import com.peepersoak.adventurecraftcore.newyear.NewYearEvent;
 import com.peepersoak.adventurecraftcore.utils.*;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
@@ -22,6 +23,8 @@ public final class AdventureCraftCore extends JavaPlugin {
     private final EventHandler eventHandler = new EventHandler();
     private final CraftingHandler craftingHandler = new CraftingHandler();
     private final Nightmare nightmare = new Nightmare();
+    private NewYearEvent newYearEvent;
+
     private DungeonEvents dungeonEvents;
     private Data dungeonSetting;
 
@@ -49,6 +52,10 @@ public final class AdventureCraftCore extends JavaPlugin {
 
         eventHandler.registerEvents(this, Bukkit.getPluginManager());
         craftingHandler.registerCraftingEvents(Bukkit.getPluginManager(), this);
+
+        newYearEvent = new NewYearEvent();
+        Bukkit.getPluginManager().registerEvents(newYearEvent, this);
+        Objects.requireNonNull(getCommand("newyear")).setExecutor(newYearEvent);
 
 //        worldTime.runTaskTimer(this, 0, 20);
         nightmare.runTaskTimer(this, 0, 60);

@@ -49,11 +49,11 @@ public class MobFactory {
 
     public MobFactory(LivingEntity entity, int level) {
         this.entity = entity;
-        this.level = level;
         this.distance = 0;
         this.isBoss = Utils.getRandom(500) < 5;
         this.isBaby = Utils.getRandom(100) < 25;
 
+        setLevel(level);
         setBaby();
         setHealth();
         setDamage();
@@ -68,8 +68,8 @@ public class MobFactory {
         this.entity = entity;
         this.distance = 0;
         this.isBoss = Math.random() < 0.00005;
-        this.level = level;
 
+        setLevel(level);
         setHealth();
         setDamage();
         setName();
@@ -89,6 +89,7 @@ public class MobFactory {
     @SuppressWarnings("deprecation")
     private void setBaby() {
         if (!(entity instanceof Zombie zombie)) return;
+        if (zombie.isBaby()) return;
         zombie.setBaby(isBaby);
     }
 
@@ -113,6 +114,11 @@ public class MobFactory {
         if (isBoss) {
             this.newHealth *= AdventureCraftCore.getInstance().getConfig().getDouble(ConfigPath.BOSS_MULTIPLIERE);
         }
+    }
+
+    private void setLevel(int level) {
+        this.level = level;
+        Utils.getPDC(entity).set(StringPath.MOB_LEVEL_KEY, PersistentDataType.INTEGER, level);
     }
 
     private void setLevel() {

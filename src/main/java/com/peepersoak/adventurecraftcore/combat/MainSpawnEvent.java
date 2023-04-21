@@ -1,15 +1,9 @@
 package com.peepersoak.adventurecraftcore.combat;
 
-import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.combat.levelmobs.MobFactory;
 import com.peepersoak.adventurecraftcore.utils.Flags;
 import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldguard.WorldGuard;
-import com.sk89q.worldguard.protection.ApplicableRegionSet;
-import com.sk89q.worldguard.protection.regions.RegionContainer;
-import com.sk89q.worldguard.protection.regions.RegionQuery;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -21,7 +15,10 @@ public class MainSpawnEvent implements Listener {
 
     @EventHandler
     public void onSpawn(CreatureSpawnEvent e) {
-        if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER) return;
+        if (Utils.checkWGState(e.getEntity(), Flags.IS_DUNGEON_WORLD)) return;
+        if (e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER || e.getSpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) return;
+        if (Utils.getPDC(e.getEntity()).has(StringPath.MOB_LEVEL_KEY, PersistentDataType.INTEGER)) return;
+
         if (e.getEntity() instanceof Zombie zombie && zombie.getType() == EntityType.ZOMBIE) {
             if (!Utils.checkWGState(zombie, Flags.ALLOW_CUSTOM_MOBS)) return;
             if (Utils.getPDC(zombie).has(StringPath.CUSTOM_ZOMBIE, PersistentDataType.STRING)) return;
@@ -35,7 +32,7 @@ public class MainSpawnEvent implements Listener {
             return;
         }
         if (e.getEntity().getPersistentDataContainer().has(StringPath.WARD_WITCH, PersistentDataType.STRING)) return;
-        if (Utils.checkWGState(e.getEntity(), Flags.ALLOW_CUSTOM_MOBS)) return; {
+        if (Utils.checkWGState(e.getEntity(), Flags.ALLOW_CUSTOM_MOBS)) {
             new MobFactory(monster);
         }
     }

@@ -35,6 +35,8 @@ public class WorldEvents implements Listener {
             }
         }
 
+        if (e.getPlayer().isOp()) shouldEnter = true;
+
         if (!shouldEnter) {
             Player player = e.getPlayer();
 
