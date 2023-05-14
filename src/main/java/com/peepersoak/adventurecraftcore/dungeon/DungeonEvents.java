@@ -13,21 +13,23 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Container;
 import org.bukkit.block.CreatureSpawner;
+import org.bukkit.block.EnderChest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -93,6 +95,7 @@ public class DungeonEvents implements CommandExecutor, Listener {
     private final ItemStack dungeonCoin = new ItemStack(Material.SUNFLOWER);
     private ItemStack dungeonLife;
     private final NamespacedKey BOSS_PERSISTENT_DATA = new NamespacedKey(AdventureCraftCore.getInstance(), "BossData");
+    private final NamespacedKey DUNGEON_LIFE_COUNT = new NamespacedKey(AdventureCraftCore.getInstance(), "DungeonLifeCount");
     private final List<EntityType> BOSS_TYPE = new ArrayList<>();
     private boolean hasBoss = false;
 
@@ -335,10 +338,6 @@ public class DungeonEvents implements CommandExecutor, Listener {
         int xpAmount = Utils.getRandom(1000, 100);
         e.setDroppedExp(xpAmount);
 
-//        if (Utils.getRandom(100) < 25) {
-//            e.getDrops().add(dungeonCoin);
-//        }
-
         Integer level = Utils.getPDC(e.getEntity()).get(StringPath.MOB_LEVEL_KEY, PersistentDataType.INTEGER);
         if (level != null) {
             double maxAmount = Math.max(1, level) * 10;
@@ -360,30 +359,61 @@ public class DungeonEvents implements CommandExecutor, Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH)
     public void onDeath(EntityDamageEvent e) {
         if (!(e.getEntity() instanceof Player player)) return;
         if (player.getWorld() != dungeonWorld) return;
         if (!Utils.checkWGState(player, Flags.ALLOW_DUNGEON_LIFE)) return;
-        if (e.getFinalDamage() >= player.getHealth()) {
-            Inventory inv = player.getInventory();
-            HashMap<Integer, ? extends ItemStack> map = inv.all(Material.TOTEM_OF_UNDYING);
 
-            for (Integer index : map.keySet()) {
-                ItemStack item = inv.getItem(index);
-                if (item == null) continue;
-                if (item.getItemMeta() == null) continue;
-                if (Utils.getPDC(item.getItemMeta()).has(StringPath.DUNGEON_LIFE, PersistentDataType.INTEGER)) {
-                    e.setCancelled(true);
-                    if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
-                    else inv.setItem(index, null);
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "warp " + dungeonWorld.getName() + " " + player.getName());
-                    player.sendMessage(Utils.color("&4Your &6straw doll &4has been consumed!"));
-                    player.setHealth(Objects.requireNonNull(player.getAttribute(Attribute.GENERIC_MAX_HEALTH)).getBaseValue());
-                    break;
-                }
-            }
+        ItemStack hand = player.getInventory().getItemInMainHand();
+        ItemStack off = player.getInventory().getItemInOffHand();
+
+        if (hand.getType() == Material.TOTEM_OF_UNDYING || off.getType() == Material.TOTEM_OF_UNDYING) return;
+
+        if (e.getFinalDamage() >= player.getHealth()) {
+            PersistentDataContainer pdc = player.getPersistentDataContainer();
+            if (!pdc.has(DUNGEON_LIFE_COUNT, PersistentDataType.INTEGER)) return;
+            Integer lifeCount = pdc.get(DUNGEON_LIFE_COUNT, PersistentDataType.INTEGER);
+            if (lifeCount == null || lifeCount <= 0) return;
+            e.setCancelled(true);
+            lifeCount--;
+
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "warp " + dungeonWorld.getName() + " " + player.getName());
+            player.sendMessage(Utils.color("&4Your &6straw doll &4has been consumed! " + lifeCount + " doll remaining."));
+            player.setHealth(Objects.requireNonNull(player.getAttribute(Attribute.GENERIC_MAX_HEALTH)).getBaseValue());
+            pdc.set(DUNGEON_LIFE_COUNT, PersistentDataType.INTEGER, lifeCount);
         }
+    }
+
+    @EventHandler
+    public void onDungeonLifeConsume(PlayerInteractEvent e) {
+        if (e.getHand() != EquipmentSlot.HAND) return;
+        if (e.getAction() != Action.RIGHT_CLICK_AIR) return;
+        if (e.getItem() == null || !e.hasItem()) return;
+        if (e.getItem().getType() != Material.TOTEM_OF_UNDYING) return;
+        ItemStack item = e.getItem();
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return;
+        if (!Utils.getPDC(meta).has(StringPath.DUNGEON_LIFE, PersistentDataType.INTEGER)) return;
+        item.setAmount(0);
+        item.setType(Material.AIR);
+
+        Player player = e.getPlayer();
+        if (Utils.getPDC(player).has(DUNGEON_LIFE_COUNT, PersistentDataType.INTEGER)) {
+            Integer count = Utils.getPDC(player).get(DUNGEON_LIFE_COUNT, PersistentDataType.INTEGER);
+            if (count == null || count == 0) {
+                count = 1;
+            } else {
+                count++;
+            }
+            Utils.getPDC(player).set(DUNGEON_LIFE_COUNT, PersistentDataType.INTEGER, count);
+            player.sendMessage(Utils.color("&6Straw doll has been increased to &b" + count + " &edoll`s"));
+        } else {
+            Utils.getPDC(player).set(DUNGEON_LIFE_COUNT, PersistentDataType.INTEGER, 1);
+            player.sendMessage(Utils.color("&6You now have &b1 &estraw doll!"));
+        }
+
+        player.getWorld().playSound(player.getLocation(), Sound.ITEM_TOTEM_USE, 5, 1);
     }
 
     @EventHandler
@@ -401,6 +431,10 @@ public class DungeonEvents implements CommandExecutor, Listener {
             }
             else if (s instanceof CreatureSpawner spawner) {
                 setUpTheSpawner(spawner);
+            } else if (s instanceof EnderChest enderChest) {
+                enderChest.setType(Material.CHEST);
+                Location loc = s.getLocation();
+                System.out.println("Ender Chest Found in " + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ());
             }
         }
     }
@@ -484,6 +518,7 @@ public class DungeonEvents implements CommandExecutor, Listener {
             public void run() {
                 if (count <= 0) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "warp " + dungeonWorld.getName() + " " + player.getName());
+                    player.setGameMode(GameMode.ADVENTURE);
                     this.cancel();
                     return;
                 }
@@ -505,6 +540,7 @@ public class DungeonEvents implements CommandExecutor, Listener {
             public void run() {
                 if (count <= 0) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "warp spawn " + player.getName());
+                    player.setGameMode(GameMode.SURVIVAL);
                     this.cancel();
                     return;
                 }
@@ -529,11 +565,7 @@ public class DungeonEvents implements CommandExecutor, Listener {
         }
         else if (item.getType() == Material.ARROW && Utils.getRandom(100) < 15) {
             item = arrowFactory.createArrow();
-        }
-        else if (item.getType() == Material.SUNFLOWER && Utils.getRandom(100) < 15) {
-//            item = dungeonCoin;
-        }
-        else {
+        } else {
             enchantItem(item);
         }
 
@@ -591,7 +623,7 @@ public class DungeonEvents implements CommandExecutor, Listener {
             case RAVAGER -> spawnBossRavager(location, bossLevel);
             case ILLUSIONER -> spawnBossIllusioner(location, bossLevel);
             case ZOMBIE -> spawnBossZombie(location, bossLevel);
-            case WARDEN -> spawnBossWarden(location, bossLevel);
+//            case WARDEN -> spawnBossWarden(location, bossLevel);
             case WITHER -> spawnBossWither(location, bossLevel);
         }
     }
@@ -685,10 +717,9 @@ public class DungeonEvents implements CommandExecutor, Listener {
         lore.add(Utils.color("&8you back to spawn when you"));
         lore.add(Utils.color("&8take a lethal damage"));
         lore.add("");
-        lore.add(Utils.color("&8Just put this somewhere in your"));
-        lore.add(Utils.color("&8Inventory for it to work"));
-        lore.add("");
         lore.add(Utils.color("&8Can be use as a regular totem"));
+        lore.add("");
+        lore.add(Utils.color("&bRight click to consume"));
         meta.setLore(lore);
 
         Utils.getPDC(meta).set(StringPath.DUNGEON_LIFE, PersistentDataType.INTEGER, 1);

@@ -116,6 +116,7 @@ public class Enchantments {
 		normalEnchantment.add("Smite".toUpperCase());
 		normalEnchantment.add("Thorns".toUpperCase());
 		normalEnchantment.add("Unbreaking".toUpperCase());
+		normalEnchantment.add("Looting".toUpperCase());
 	}
 	
 	public void setCustomEnchants() {

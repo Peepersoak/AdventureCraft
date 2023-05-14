@@ -197,4 +197,11 @@ public class Utils {
             e.setDamage(e.getDamage() + additionDamage);
         }
     }
+
+    public static void giveItemToPlayer(ItemStack item, Player player) {
+        HashMap<Integer, ItemStack> items = player.getInventory().addItem(item);
+        for (ItemStack i : items.values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), i);
+        }
+    }
 }

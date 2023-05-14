@@ -37,22 +37,22 @@ public class ArrowEvents implements Listener {
         castEffect(playerShot.get(player.getUniqueId()), target, player, target.getLocation(), arrow);
     }
 
-    @EventHandler
-    public void onBlockHit(ProjectileHitEvent e) {
-        if (!(e.getEntity() instanceof Arrow arrow)) return;
-        if (!(arrow.getShooter() instanceof Player player)) return;
-        if (!playerShot.containsKey(player.getUniqueId())) return;
-        String type = playerShot.get(player.getUniqueId());
-        if (type.equalsIgnoreCase("Lava") || type.equalsIgnoreCase("water")) {
-            if (e.getHitBlock() == null) return;
-            Block block = e.getHitBlock();
-            if (getRelativeAirBlock(block) == null) return;
-            Block airBlock = getRelativeAirBlock(block);
-            Location location = airBlock.getLocation();
-            arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
-            castEffect(playerShot.get(player.getUniqueId()), null, player, location, arrow);
-        }
-    }
+//    @EventHandler
+//    public void onBlockHit(ProjectileHitEvent e) {
+//        if (!(e.getEntity() instanceof Arrow arrow)) return;
+//        if (!(arrow.getShooter() instanceof Player player)) return;
+//        if (!playerShot.containsKey(player.getUniqueId())) return;
+//        String type = playerShot.get(player.getUniqueId());
+//        if (type.equalsIgnoreCase("Lava") || type.equalsIgnoreCase("water")) {
+//            if (e.getHitBlock() == null) return;
+//            Block block = e.getHitBlock();
+//            if (getRelativeAirBlock(block) == null) return;
+//            Block airBlock = getRelativeAirBlock(block);
+//            Location location = airBlock.getLocation();
+//            arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+//            castEffect(playerShot.get(player.getUniqueId()), null, player, location, arrow);
+//        }
+//    }
 
     @EventHandler
     public void onShootEvent(EntityShootBowEvent e) {

@@ -48,7 +48,12 @@ public class ItemFactory {
 		Utils.getPDC(meta).set(StringPath.ENCHANT_META, PersistentDataType.INTEGER, 1);
 		paper.setItemMeta(meta);
 		paper.addUnsafeEnchantment(Enchantment.DURABILITY, 1);
-		return paper;
+
+		if (mobLevel >= materialLevel) {
+			return paper;
+		} else {
+			return null;
+		}
 	}
 	
 	public ItemStack createBook(int level) {
@@ -112,20 +117,19 @@ public class ItemFactory {
 
 		if (customChanceWG != -1) customChance = customChanceWG;
 		if (skillChanceWG != -1) skillChance = skillChanceWG;
-		
+
+		System.out.println(mobLevel);
+
 		if (mobLevel <= 15) {
 			materialType = "Normal";
-			System.out.println("NORMAL");
 		}
 		
 		if (mobLevel > 15 && mobLevel < 30) {
 			int random = Utils.getRandom(100);
 			if (random < customChance) {
 				materialType = "Custom";
-				System.out.println("CUSTOM");
 			} else {
 				materialType = "Normal";
-				System.out.println("NORMAL " + random + " " + customChance);
 			}
 		}
 		
@@ -133,13 +137,10 @@ public class ItemFactory {
 			int random = Utils.getRandom(100);
 			if (random < skillChance) {
 				materialType =  "Skill";
-				System.out.println("SKILL");
 			} else if (Utils.getRandom(100) < customChance) {
 				materialType = "Custom";
-				System.out.println("CUSTOM");
 			} else {
 				materialType = "Normal";
-				System.out.println("NORMAL " + random + " " + customChance);
 			}
 		}
 	}
@@ -157,13 +158,13 @@ public class ItemFactory {
 	}
 	
 	public void setMaterialLevel() {
-		if (mobLevel <= 10 && mobLevel >= 5) {
-			String enchantName = materialEnchant.toLowerCase().replace(" ", "_");
+		String enchantName = materialEnchant.toLowerCase().replace(" ", "_");
+		if (materialType.equalsIgnoreCase("Normal")) {
 			int enchantMaxLevel = Objects.requireNonNull(Enchantment.getByKey(NamespacedKey.minecraft(enchantName))).getMaxLevel();
-			int random = rand.nextInt(10) + 1;
-			materialLevel = enchantMaxLevel + random;
+			materialLevel = Math.max(enchantMaxLevel + 1, mobLevel);
+		} else {
+			materialLevel = mobLevel;
 		}
-		if (mobLevel > 10) materialLevel = mobLevel;
 	}
 	
 	public void setLore() {

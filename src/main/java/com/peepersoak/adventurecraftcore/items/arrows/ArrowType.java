@@ -9,8 +9,8 @@ public enum ArrowType {
     POISON,
     PORTAL,
     SHOTGUN,
-    LAVA,
-    WATER,
+//    LAVA,
+//    WATER,
     FEATHER,
     WEB,
     FLYING

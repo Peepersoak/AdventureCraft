@@ -48,7 +48,7 @@ public class WardFactory {
         List<String> lore = new ArrayList<>();
         lore.add("");
         lore.add(ChatColor.GOLD + "Summon the necromancer");
-        lore.add(ChatColor.GOLD + "on your location for 60 seconds!");
+        lore.add(ChatColor.GOLD + "on your location for 300 seconds!");
         lore.add("");
         lore.add(ChatColor.AQUA + "Right-Clicked to use");
         lore.add("");

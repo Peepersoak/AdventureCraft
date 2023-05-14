@@ -33,6 +33,7 @@ public class CustomWitch extends Witch {
         this.setCanJoinRaid(false);
 
         org.bukkit.entity.Witch witch = (org.bukkit.entity.Witch) this.getBukkitEntity();
+        witch.setRemoveWhenFarAway(true);
         witch.setCustomName(Utils.color("&e" + type.name().replace("_", " ") + " WARD"));
         witch.setCustomNameVisible(true);
         witch.getPersistentDataContainer().set(StringPath.WARD_WITCH, PersistentDataType.STRING, "CustomWitch");
@@ -70,11 +71,12 @@ public class CustomWitch extends Witch {
 
     private void runTask(WardType type, org.bukkit.entity.Witch witch) {
         new BukkitRunnable() {
-            int count = 60;
+            int count = 300;
             @Override
             public void run() {
                 if (count <= 0) witch.remove();
                 if (witch.isDead()) {
+                    witch.remove();
                     this.cancel();
                     return;
                 }
@@ -88,6 +90,7 @@ public class CustomWitch extends Witch {
                     case POISON, WEAKNESS, SLOWNESS -> {
                         for (Entity entity : witch.getNearbyEntities(10, 5, 10)) {
                             if (!(entity instanceof Monster monster)) continue;
+                            if (monster.getPersistentDataContainer().has(StringPath.WARD_WITCH, PersistentDataType.STRING)) continue;
                             monster.addPotionEffect(new PotionEffect(getPotionEffect(type), 60, 2));
                         }
                     }

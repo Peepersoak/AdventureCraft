@@ -18,4 +18,9 @@ public class StringPath {
     public static NamespacedKey WARD_WITCH = new NamespacedKey(AdventureCraftCore.getInstance(), "CustomWitchWard");
     public static NamespacedKey ENCHANT_META = new NamespacedKey(AdventureCraftCore.getInstance(), "EnchantMeta");
     public static NamespacedKey DUNGEON_LIFE = new NamespacedKey(AdventureCraftCore.getInstance(), "DungeonLife");
+    public static NamespacedKey ACCEPTED_SCROLL_TP = new NamespacedKey(AdventureCraftCore.getInstance(), "AcceptedScrollTP");
+    public static NamespacedKey ACCEPT_TP = new NamespacedKey(AdventureCraftCore.getInstance(), "AcceptTeleport");
+
+    public static String MODERATOR_PERMISSION = "adventurecraft.moderator";
+    public static String AFK_BYPASS_PERMISSION = "adventurecraft.afk_bypass";
 }

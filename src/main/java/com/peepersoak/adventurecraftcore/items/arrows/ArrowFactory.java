@@ -82,14 +82,14 @@ public class ArrowFactory {
                 lore.add(Utils.color("&7Shoot multiple arrow"));
                 lore.add(Utils.color("&7at the same time"));
             }
-            case LAVA -> {
-                lore.add(Utils.color("&7Create a lava on target"));
-                lore.add(Utils.color("&7location"));
-            }
-            case WATER -> {
-                lore.add(Utils.color("&7Create a water source on target"));
-                lore.add(Utils.color("&7location"));
-            }
+//            case LAVA -> {
+//                lore.add(Utils.color("&7Create a lava on target"));
+//                lore.add(Utils.color("&7location"));
+//            }
+//            case WATER -> {
+//                lore.add(Utils.color("&7Create a water source on target"));
+//                lore.add(Utils.color("&7location"));
+//            }
             case FEATHER -> {
                 lore.add(Utils.color("&7Make your target float for 5"));
                 lore.add(Utils.color("&7Seconds"));

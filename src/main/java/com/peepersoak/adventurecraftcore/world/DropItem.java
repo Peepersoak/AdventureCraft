@@ -12,6 +12,7 @@ import org.bukkit.entity.Monster;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
 
@@ -27,7 +28,7 @@ public class DropItem implements Listener {
         if (!(e.getEntity() instanceof Monster monster)) return;
 
         Integer level = Utils.getPDC(monster).get(StringPath.MOB_LEVEL_KEY, PersistentDataType.INTEGER);
-        if (level == null || level < 5) return;
+        if (level == null) return;
 
         Location location = monster.getLocation();
 
@@ -42,6 +43,8 @@ public class DropItem implements Listener {
         Utils.dropItem(arrowFactory.createArrow(), arrowChance == -1 ? 5 : arrowChance, location);
 
         itemFactory.setPaper(monster);
-        Utils.dropItem(itemFactory.createPaper(), 5, location);
+        ItemStack paper = itemFactory.createPaper();
+        if (paper == null) return;
+        Utils.dropItem(paper, 5, location);
     }
 }

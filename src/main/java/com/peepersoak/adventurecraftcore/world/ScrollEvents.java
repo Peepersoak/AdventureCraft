@@ -1,6 +1,7 @@
 package com.peepersoak.adventurecraftcore.world;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
+import com.peepersoak.adventurecraftcore.items.scrolls.ScrollFactory;
 import com.peepersoak.adventurecraftcore.items.scrolls.ScrollType;
 import com.peepersoak.adventurecraftcore.utils.AllPotionEffect;
 import com.peepersoak.adventurecraftcore.utils.Flags;
@@ -36,6 +37,7 @@ import java.util.*;
 public class ScrollEvents implements Listener {
     AllPotionEffect potionEffect = new AllPotionEffect();
     List<UUID> teleporting = new ArrayList<>();
+    List<UUID> requestingPlayer = new ArrayList<>();
 
     @EventHandler
     public void useScroll(PlayerInteractEvent e) {
@@ -67,7 +69,7 @@ public class ScrollEvents implements Listener {
                 Location bedSpawn = player.getBedSpawnLocation();
                 if (bedSpawn != null) {
                     consumeItem(e.getItem(), player);
-                    teleport(player, bedSpawn);
+                    teleport(player, null,bedSpawn);
                 } else {
                     player.sendMessage(Utils.color("&cCan't locate your bed spawn!"));
                 }
@@ -86,18 +88,29 @@ public class ScrollEvents implements Listener {
 
             case ACCOMPANY -> {
                 if (!Utils.checkWGState(player, Flags.ALLOW_SCROLL_TP)) return;
+                if (requestingPlayer.contains(player.getUniqueId())) {
+                    player.sendMessage(Utils.color("&cYou already have an existing teleport request!"));
+                    return;
+                }
+                requestingPlayer.add(player.getUniqueId());
                 openTeleportGUI(player, false);
                 consumeItem(e.getItem(), player);
+                runTask(player, scroll);
             }
 
             case MAGNETIC_FORCE -> {
                 if (!Utils.checkWGState(player, Flags.ALLOW_SCROLL_TP)) return;
+                if (requestingPlayer.contains(player.getUniqueId())) {
+                    player.sendMessage(Utils.color("&cYou already have an existing teleport request!"));
+                    return;
+                }
+                requestingPlayer.add(player.getUniqueId());
                 openTeleportGUI(player, true);
                 consumeItem(e.getItem(), player);
+                runTask(player, scroll);
             }
 
             case ALL_FOR_ONE -> {
-                System.out.println(Utils.color("&ePowerrrrrrrrrr"));
                 player.addPotionEffects(potionEffect.getPotionList());
                 consumeItem(e.getItem(), player);
             }
@@ -137,22 +150,65 @@ public class ScrollEvents implements Listener {
             Integer rawMagnetic = Utils.getPDC(meta).get(StringPath.SCROLL_MAGNETIC, PersistentDataType.INTEGER);
             if (rawMagnetic == null) return;
             if (rawMagnetic == 1) {
-                teleport(player, target.getLocation());
                 player.sendMessage(Utils.color("&eYou consumed a Magnetic Scroll"));
                 target.sendMessage(Utils.color("&6" + player.getName() + " used a Magnetic Scroll to your location!"));
+
+                openTPAcceptGUI(player, target, true);
                 player.closeInventory();
             } else {
                 player.sendMessage(Utils.color("&eYou consumed an Accompany Scroll"));
                 target.sendMessage(Utils.color("&6" + player.getName() + " used an Accompany Scroll to your location!"));
+
+                openTPAcceptGUI(player, target, false);
                 player.closeInventory();
-                List<Entity> entities = player.getNearbyEntities(5,5,5);
-                for (Entity ent : entities) {
-                    if (ent instanceof Player t) {
-                        teleport(t, target.getLocation());
-                    }
-                }
-                teleport(player, target.getLocation());
             }
+        }
+    }
+
+    @EventHandler
+    public void onTPAccept(InventoryClickEvent e) {
+        if (!e.getView().getTitle().equalsIgnoreCase("Teleport Request")) return;
+        e.setCancelled(true);
+        if (e.getCurrentItem() != null) {
+            Player player = (Player) e.getWhoClicked();
+            ItemStack item = e.getCurrentItem();
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null) return;
+
+            if (!Utils.getPDC(meta).has(StringPath.ACCEPTED_SCROLL_TP, PersistentDataType.STRING)) return;
+            String requesterName = Utils.getPDC(meta).get(StringPath.ACCEPTED_SCROLL_TP, PersistentDataType.STRING);
+
+            if (requesterName == null) return;
+            Player requester = Bukkit.getPlayer(requesterName);
+            if (requester == null) return;
+
+            Integer rawMagnetic = Utils.getPDC(meta).get(StringPath.SCROLL_MAGNETIC, PersistentDataType.INTEGER);
+            if (rawMagnetic == null) return;
+
+            Integer accepted = Utils.getPDC(meta).get(StringPath.ACCEPT_TP, PersistentDataType.INTEGER);
+            if (accepted == null) return;
+
+            if (accepted == 1) {
+                requester.sendMessage(Utils.color("&6Your teleport request has been accepted!"));
+                requestingPlayer.remove(requester.getUniqueId());
+
+                if (rawMagnetic == 1) {
+                    teleport(requester, player, null);
+                } else {
+                    List<Entity> entities = requester.getNearbyEntities(5,5,5);
+                    for (Entity ent : entities) {
+                        if (ent instanceof Player t) {
+                            teleport(t, player, null);
+                        }
+                    }
+                    teleport(requester, player, null);
+                }
+            } else {
+                requester.sendMessage(Utils.color("&cYour teleport request has been denied!"));
+                requestingPlayer.remove(requester.getUniqueId());
+            }
+
+            player.closeInventory();
         }
     }
 
@@ -163,11 +219,16 @@ public class ScrollEvents implements Listener {
             if (player == target) continue;
             ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
             SkullMeta meta = (SkullMeta) skull.getItemMeta();
+
+            int isMag = 0;
+            if (isMagnetic) isMag = 1;
+
             if (meta != null) {
                 meta.setOwningPlayer(target);
                 Utils.getPDC(meta).set(StringPath.SCROLL_TP, PersistentDataType.STRING, target.getName());
-                Utils.getPDC(meta).set(StringPath.SCROLL_MAGNETIC, PersistentDataType.INTEGER, isMagnetic ? 1 : 0);
+                Utils.getPDC(meta).set(StringPath.SCROLL_MAGNETIC, PersistentDataType.INTEGER, isMag);
             }
+
             skull.setItemMeta(meta);
             inv.setItem(count, skull);
             count++;
@@ -175,7 +236,58 @@ public class ScrollEvents implements Listener {
         player.openInventory(inv);
     }
 
-    private void teleport(Player player, Location location) {
+    public void openTPAcceptGUI(Player player, Player target, boolean isMagnetic) {
+        Inventory inv = Bukkit.createInventory(null, 27, "Teleport Request");
+
+        int isMag = 0;
+        if (isMagnetic) isMag = 1;
+
+        int[] slots = {11, 13, 15};
+        for (int slot : slots) {
+            ItemStack item;
+
+            ItemMeta meta = null;
+            SkullMeta skullMeta;
+
+            switch (slot) {
+                case 11 -> {
+                    item = new ItemStack(Material.LIME_WOOL);
+                    meta = item.getItemMeta();
+                    if (meta != null) {
+                        Utils.getPDC(meta).set(StringPath.ACCEPTED_SCROLL_TP, PersistentDataType.STRING, player.getName());
+                        Utils.getPDC(meta).set(StringPath.SCROLL_MAGNETIC, PersistentDataType.INTEGER, isMag);
+                        Utils.getPDC(meta).set(StringPath.ACCEPT_TP, PersistentDataType.INTEGER, 1);
+                        meta.setDisplayName(Utils.color("&3Accept"));
+                    }
+                }
+                case 13 -> {
+                    item = new ItemStack(Material.PLAYER_HEAD);
+                    skullMeta = (SkullMeta) item.getItemMeta();
+                    if (skullMeta != null) {
+                        skullMeta.setOwningPlayer(player);
+                        skullMeta.setDisplayName(Utils.color("&6" + player.getName()));
+                    }
+                }
+                default -> {
+                    item = new ItemStack(Material.RED_WOOL);
+                    meta = item.getItemMeta();
+                    if (meta != null) {
+                        Utils.getPDC(meta).set(StringPath.ACCEPTED_SCROLL_TP, PersistentDataType.STRING, player.getName());
+                        Utils.getPDC(meta).set(StringPath.SCROLL_MAGNETIC, PersistentDataType.INTEGER, isMag);
+                        Utils.getPDC(meta).set(StringPath.ACCEPT_TP, PersistentDataType.INTEGER, 0);
+                        meta.setDisplayName(Utils.color("&cDeny"));
+                    }
+                }
+            }
+
+            item.setItemMeta(meta);
+            inv.setItem(slot, item);
+        }
+
+        target.openInventory(inv);
+    }
+
+    private void teleport(Player player, Player target, Location bed) {
         if (teleporting.contains(player.getUniqueId())) {
             player.sendMessage(Utils.color("&cYou are currently teleporting!"));
             return;
@@ -186,7 +298,15 @@ public class ScrollEvents implements Listener {
             @Override
             public void run() {
                 if (count <= 0) {
-                    player.teleport(location);
+                    if (bed == null) {
+                        if (target != null) {
+                            player.teleport(target.getLocation());
+                        } else {
+                            player.sendMessage(Utils.color("&cPlayer location is missing!"));
+                        }
+                    } else {
+                        player.teleport(bed);
+                    }
                     teleporting.remove(player.getUniqueId());
                     this.cancel();
                     return;
@@ -204,7 +324,7 @@ public class ScrollEvents implements Listener {
     private void healTarget(Player player, Player target) {
         if (target == null) {
             player.setHealth(Objects.requireNonNull(player.getAttribute(Attribute.GENERIC_MAX_HEALTH)).getBaseValue());
-            player.sendMessage(Utils.color( "&eYou got healed you!"));
+            player.sendMessage(Utils.color( "&eYou got healed!"));
         } else {
             target.setHealth(Objects.requireNonNull(target.getAttribute(Attribute.GENERIC_MAX_HEALTH)).getBaseValue());
             target.sendMessage(Utils.color("&6" + player.getName() + " &ehealed you!"));
@@ -220,7 +340,35 @@ public class ScrollEvents implements Listener {
         }
     }
 
-    private boolean isSameLocation(Location init, Location comp) {
-        return init.getBlockX() == comp.getBlockX() && init.getBlockY() == comp.getBlockY() && init.getBlockZ() == comp.getBlockZ();
+    private void runTask(Player player, String scrollType) {
+        new BukkitRunnable() {
+            int count = 60;
+            @Override
+            public void run() {
+                if (!requestingPlayer.contains(player.getUniqueId())) {
+                    this.cancel();
+                    return;
+                }
+                if (count <= 0 && requestingPlayer.contains(player.getUniqueId())) {
+                    ScrollFactory factory = new ScrollFactory();
+                    ItemStack itemScroll = factory.createScroll(scrollType);
+                    requestingPlayer.remove(player.getUniqueId());
+                    Utils.giveItemToPlayer(itemScroll, player);
+                    player.sendMessage(Utils.color("&6Scroll has been refunded!"));
+                    this.cancel();
+                    return;
+                }
+                if (count == 60 || count == 30 || count == 15) {
+                    player.sendMessage(Utils.color("&6TP Request will expire in &b" + count + " &6seconds"));
+                }
+                if (count == 5) {
+                    player.sendMessage(Utils.color("&6TP Request will expire in &b" + count + " &6seconds"));
+                }
+                if (count < 5) {
+                    player.sendMessage(Utils.color("&c" + count));
+                }
+                count--;
+            }
+        }.runTaskTimer(AdventureCraftCore.getInstance(), 0, 20);
     }
 }

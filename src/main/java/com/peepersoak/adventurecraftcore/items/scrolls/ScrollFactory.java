@@ -74,13 +74,13 @@ public class ScrollFactory {
 
             case ALL_FOR_ONE -> {
                 scrollLore.add(Utils.color("&dGet all positive effect"));
-                scrollLore.add(Utils.color("&dfor 60 seconds"));
+                scrollLore.add(Utils.color("&dfor 300 seconds"));
             }
 
             case ONE_FOR_ALL -> {
                 scrollLore.add(Utils.color("&dAdd 1 random positive effect to"));
                 scrollLore.add(Utils.color("&dall players in a 20 Block radius"));
-                scrollLore.add(Utils.color("&dfor 60 seconds"));
+                scrollLore.add(Utils.color("&dfor 300 seconds"));
             }
         }
 

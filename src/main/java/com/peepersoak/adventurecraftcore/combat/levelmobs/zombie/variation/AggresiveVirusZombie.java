@@ -6,16 +6,23 @@ import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.DestroyBlock;
 import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.ZombieType;
 import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.ai.navigation.WallClimberNavigation;
 import net.minecraft.world.entity.animal.*;
 import net.minecraft.world.entity.animal.horse.Donkey;
 import net.minecraft.world.entity.animal.horse.Horse;
 import net.minecraft.world.entity.animal.horse.Llama;
+import net.minecraft.world.entity.monster.Spider;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.npc.AbstractVillager;
+import net.minecraft.world.level.Level;
 import org.bukkit.Location;
 
 import org.bukkit.craftbukkit.v1_19_R2.CraftWorld;
@@ -39,7 +46,8 @@ public class AggresiveVirusZombie extends Zombie {
         Utils.getPDC(zombie).set(StringPath.CUSTOM_ZOMBIE, PersistentDataType.STRING, ZombieType.AGGRESIVE_ZOMBIE);
 
         new MobFactory(zombie);
-        new DestroyBlock((org.bukkit.entity.Zombie) zombie).runTaskTimer(AdventureCraftCore.getInstance(), 100, 100);
+//        new DestroyBlock((org.bukkit.entity.Zombie) zombie).runTaskTimer(AdventureCraftCore.getInstance(), 100, 100);
+
     }
 
     @Override
@@ -75,6 +83,9 @@ public class AggresiveVirusZombie extends Zombie {
         this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
 
         this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 1.0));
+    }
 
+    protected PathNavigation createNavigation(Level world) {
+        return new WallClimberNavigation(this, world);
     }
 }

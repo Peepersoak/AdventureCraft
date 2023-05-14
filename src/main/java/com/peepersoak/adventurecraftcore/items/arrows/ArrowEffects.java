@@ -1,10 +1,12 @@
 package com.peepersoak.adventurecraftcore.items.arrows;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
+import com.peepersoak.adventurecraftcore.utils.StringPath;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.*;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -40,6 +42,7 @@ public class ArrowEffects {
                 Entity[] entities = world.getChunkAt(baseX + x, baseZ + z).getEntities();
                 for (Entity ent : entities) {
                     if (ent instanceof Monster monster) {
+                        if (monster.getPersistentDataContainer().has(StringPath.WARD_WITCH, PersistentDataType.STRING)) continue;
                         monster.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 100, 20));
                         monster.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 100, 0));
                         monster.teleport(target);

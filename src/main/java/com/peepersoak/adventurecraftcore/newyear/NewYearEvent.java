@@ -8,7 +8,6 @@ import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Arrow;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
@@ -127,8 +126,6 @@ public class NewYearEvent implements CommandExecutor, Listener {
 
         if (Utils.getPDC(meta).has(gunKey, PersistentDataType.INTEGER)) {
             Firework firework = loc.getWorld().spawn(loc, Firework.class);
-//            Firework firework = player.launchProjectile(Firework.class);
-
             firework.setVelocity(v);
             firework.setGravity(false);
             firework.setShotAtAngle(true);
