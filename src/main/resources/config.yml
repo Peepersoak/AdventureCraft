@@ -26,3 +26,5 @@ Chest_Scroll: 10
 Chest_Scroll_Max: 5
 Chest_Arrow: 10
 Chest_Arrow_Max: 5
+
+OPEN_AI_KEY: ""

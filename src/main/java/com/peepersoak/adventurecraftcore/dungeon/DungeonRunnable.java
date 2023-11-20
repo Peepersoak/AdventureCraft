@@ -15,12 +15,21 @@ public class DungeonRunnable extends BukkitRunnable {
     public DungeonRunnable() {
         List<String> getWorldList = AdventureCraftCore.getInstance().getDungeonSetting().getConfig().getStringList(DungeonSettings.DUNGEON_TYPE);
         Collections.shuffle(getWorldList);
-        dungeonWorld = Bukkit.getWorld(getWorldList.get(0));
+
+        if (getWorldList.size() == 0) {
+            dungeonWorld = null;
+        } else {
+            dungeonWorld = Bukkit.getWorld(getWorldList.get(0));
+        }
     }
 
     private final World dungeonWorld;
 
     public void removeInvisibility() {
+        if (dungeonWorld == null) {
+            this.cancel();
+            return;
+        }
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (player.getWorld() != dungeonWorld) continue;
             player.removePotionEffect(PotionEffectType.INVISIBILITY);

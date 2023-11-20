@@ -45,7 +45,11 @@ public class DungeonEvents implements CommandExecutor, Listener {
 
         List<String> getWorldList = AdventureCraftCore.getInstance().getDungeonSetting().getConfig().getStringList(DungeonSettings.DUNGEON_TYPE);
         Collections.shuffle(getWorldList);
-        dungeonWorld = Bukkit.getWorld(getWorldList.get(0));
+        if (getWorldList.size() == 0)  {
+            dungeonWorld = null;
+        } else {
+            dungeonWorld = Bukkit.getWorld(getWorldList.get(0));
+        }
 
         chestType.add(Material.CHEST);
         chestType.add(Material.BARREL);
@@ -737,9 +741,11 @@ public class DungeonEvents implements CommandExecutor, Listener {
 
 
     public void removeAllEntities() {
-        List<Entity> list = dungeonWorld.getEntities();
-        for (Entity ent : list) {
-            if (ent instanceof Monster) ent.remove();
+        if (dungeonWorld != null) {
+            List<Entity> list = dungeonWorld.getEntities();
+            for (Entity ent : list) {
+                if (ent instanceof Monster) ent.remove();
+            }
         }
     }
 }

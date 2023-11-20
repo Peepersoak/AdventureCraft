@@ -7,6 +7,11 @@ import com.peepersoak.adventurecraftcore.dungeon.DungeonEvents;
 import com.peepersoak.adventurecraftcore.dungeon.DungeonRunnable;
 import com.peepersoak.adventurecraftcore.dungeon.DungeonSettings;
 import com.peepersoak.adventurecraftcore.enchantment.crafting.events.CraftingHandler;
+import com.peepersoak.adventurecraftcore.enchantment.store.OpenStore;
+import com.peepersoak.adventurecraftcore.openAI.OnGoingQuest;
+import com.peepersoak.adventurecraftcore.openAI.OpenAI;
+import com.peepersoak.adventurecraftcore.openAI.Quest;
+import com.peepersoak.adventurecraftcore.openAI.QuestCommand;
 import com.peepersoak.adventurecraftcore.utils.*;
 import com.peepersoak.adventurecraftcore.world.AntiAFK;
 import net.milkbowl.vault.economy.Economy;
@@ -16,8 +21,10 @@ import org.bukkit.WorldCreator;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 public final class AdventureCraftCore extends JavaPlugin {
     private static Economy econ = null;
@@ -25,8 +32,12 @@ public final class AdventureCraftCore extends JavaPlugin {
     private final EventHandler eventHandler = new EventHandler();
     private final CraftingHandler craftingHandler = new CraftingHandler();
     private final Nightmare nightmare = new Nightmare();
+    private OnGoingQuest onGoingQuest;
+    private OpenStore openStore;
     private DungeonEvents dungeonEvents;
     private Data dungeonSetting;
+    private Data onGoingQuestData;
+    private OpenAI openai;
 
     @Override
     public void onEnable() {
@@ -34,8 +45,13 @@ public final class AdventureCraftCore extends JavaPlugin {
         getConfig().options().copyDefaults();
         saveDefaultConfig();
 
+        openai = new OpenAI();
+
         loadYMLFiles();
         loadAllWords();
+
+        // Load all quest here
+        onGoingQuest = new OnGoingQuest();
 
         Objects.requireNonNull(getCommand("open")).setExecutor(new OpenInventory());
         Objects.requireNonNull(getCommand("scroll")).setExecutor(new Scroll());
@@ -45,6 +61,9 @@ public final class AdventureCraftCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("arrow")).setExecutor(new Arrow());
         Objects.requireNonNull(getCommand("arrow")).setTabCompleter(new ArrowAutoComplete());
         Objects.requireNonNull(getCommand("books")).setExecutor(new Books());
+        Objects.requireNonNull(getCommand("books")).setTabCompleter(new BookAutoComplete());
+
+        Objects.requireNonNull(getCommand("quest")).setExecutor(new QuestCommand());
 
         dungeonEvents = new DungeonEvents();
         Objects.requireNonNull(getCommand("dungeon")).setExecutor(dungeonEvents);
@@ -63,6 +82,10 @@ public final class AdventureCraftCore extends JavaPlugin {
         DungeonRunnable dungeonRunnable = new DungeonRunnable();
         dungeonRunnable.runTaskTimer(this, 0, 20);
 
+        openStore = new OpenStore();
+        Objects.requireNonNull(getCommand("margrave")).setExecutor(openStore);
+        Bukkit.getPluginManager().registerEvents(openStore, this);
+
         if (!setupEconomy()) getServer().getPluginManager().disablePlugin(this);
     }
 
@@ -73,16 +96,19 @@ public final class AdventureCraftCore extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        onGoingQuest.saveData();
         dungeonEvents.removeAllEntities();
     }
 
     public void loadYMLFiles() {
         dungeonSetting = new Data(FileName.DUNGEON_SETTINGS);
+        onGoingQuestData = new Data(FileName.ONGOING_QUEST);
     }
 
     public Data getDungeonSetting() {
         return dungeonSetting;
     }
+    public Data getOnGoingQuestData() { return  onGoingQuestData; }
 
     public static AdventureCraftCore getInstance() {
         return instance;
@@ -121,5 +147,9 @@ public final class AdventureCraftCore extends JavaPlugin {
 
     public static Economy getEconomy() {
         return econ;
+    }
+    public OpenAI getOpenai() { return openai; }
+    public OnGoingQuest getOnGoingQuest() {
+        return onGoingQuest;
     }
 }

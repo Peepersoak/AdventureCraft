@@ -13,7 +13,7 @@ import com.sk89q.worldguard.protection.regions.RegionContainer;
 import com.sk89q.worldguard.protection.regions.RegionQuery;
 import net.minecraft.server.level.ServerLevel;
 import org.bukkit.*;
-import org.bukkit.craftbukkit.v1_19_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R2.CraftWorld;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.inventory.ItemStack;
@@ -33,6 +33,7 @@ public class Utils {
     private static final Random rand = new Random();
 
     public static String color(String msg) {
+        if (msg == null || msg.equals("")) return "";
         return ChatColor.translateAlternateColorCodes('&', msg);
     }
 

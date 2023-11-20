@@ -2,17 +2,14 @@ package com.peepersoak.adventurecraftcore.combat.events;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.ZombieType;
-import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.variation.AggresiveVirusZombie;
-import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.variation.BoomerZombie;
 import com.peepersoak.adventurecraftcore.enchantment.skills.Skill;
 import com.peepersoak.adventurecraftcore.utils.Flags;
 import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
-import net.minecraft.server.level.ServerLevel;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.craftbukkit.v1_19_R2.CraftWorld;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -66,8 +63,10 @@ public class ZombieEvents implements Listener {
 
     @EventHandler
     public void onAttack(EntityDamageByEntityEvent e) {
-        if (!(e.getDamager() instanceof Zombie)) return;
+        if (!(e.getDamager() instanceof Zombie zombie)) return;
         if (!(e.getEntity() instanceof Player player)) return;
+
+        if (!zombie.isAdult()) return;
 
         boolean shouldSnatch = rand.nextInt(100) + 1 <= 10;
         if (!shouldSnatch) return;
@@ -81,6 +80,7 @@ public class ZombieEvents implements Listener {
         if (items.isEmpty()) return;
 
         ItemStack item = items.get(rand.nextInt(items.size()));
+        if (item.containsEnchantment(Enchantment.BINDING_CURSE)) return;
 
         Skill skill = new Skill();
         skill.setItem(item);

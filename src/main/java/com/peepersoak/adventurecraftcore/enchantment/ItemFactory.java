@@ -1,6 +1,7 @@
 package com.peepersoak.adventurecraftcore.enchantment;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
+import com.peepersoak.adventurecraftcore.enchantment.crafting.CraftingResultBook;
 import com.peepersoak.adventurecraftcore.utils.Flags;
 import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
@@ -76,6 +77,44 @@ public class ItemFactory {
 		meta.setLore(materialLore);
 		book.setItemMeta(meta);
 		return book;
+	}
+
+	public ItemStack createBook(int level, String type, String enchantment) {
+		this.materialType = type;
+		this.mobLevel = level;
+		this.materialEnchant = enchantment.replace("_", " ");
+
+		String bookType = "Normal";
+		if (type.equalsIgnoreCase("normal")) {
+			bookType = "Enchant Scripture";
+		} else if (type.equalsIgnoreCase("custom")) {
+			bookType = "Forbidden Scripture";
+			mobLevel = 45;
+		} else if (type.equalsIgnoreCase("skill")) {
+			bookType = "Forgotten Scripture";
+			mobLevel = 60;
+		}
+
+		setMaterialLevel();
+		setMaterialName();
+		setMaterialRarity();
+		setLore();
+
+		ItemStack paper = new ItemStack(Material.PAPER);
+		ItemMeta meta = paper.getItemMeta();
+		if (meta == null) return null;
+
+		meta.setDisplayName(materialName);
+		meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+		meta.setLore(materialLore);
+		Utils.getPDC(meta).set(StringPath.ENCHANT_META, PersistentDataType.INTEGER, 1);
+		paper.setItemMeta(meta);
+		paper.addUnsafeEnchantment(Enchantment.DURABILITY, 1);
+
+		CraftingResultBook book = new CraftingResultBook();
+		book.setItemMeta(paper);
+
+		return book.createBook(bookType);
 	}
 
 	public void setPaper(int level, String type) {

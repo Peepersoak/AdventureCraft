@@ -10,7 +10,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.monster.Witch;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_19_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R2.CraftWorld;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
@@ -54,15 +54,15 @@ public class CustomWitch extends Witch {
         super.registerGoals();
     }
 
-    @Override
-    public void aiStep() {
-        if (!this.level.isClientSide && this.isAlive()) {
-            if (this.random.nextFloat() < 7.5E-4F) {
-                this.level.broadcastEntityEvent(this, (byte)15);
-            }
-        }
-        super.aiStep();
-    }
+//    @Override
+//    public void aiStep() {
+//        if (!this.level.isClientSide && this.isAlive()) {
+//            if (this.random.nextFloat() < 7.5E-4F) {
+//                this.level.broadcastEntityEvent(this, (byte)15);
+//            }
+//        }
+//        super.aiStep();
+//    }
 
     @Override
     public void performRangedAttack(LivingEntity entityliving, float f) {

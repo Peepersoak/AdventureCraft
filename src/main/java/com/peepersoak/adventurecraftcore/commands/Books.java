@@ -5,6 +5,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 public class Books implements CommandExecutor {
 
@@ -24,10 +25,15 @@ public class Books implements CommandExecutor {
                 itemFactory.setPaper(level, type);
                 player.getInventory().addItem(itemFactory.createPaper());
                 return false;
+            } else {
+                String type = args[0];
+                String enchant = args[1];
+                int level = Integer.parseInt(args[2]);
+
+                ItemStack book = itemFactory.createBook(level, type, enchant);
+                player.getInventory().addItem(book);
             }
         }
-
-        player.getInventory().addItem(itemFactory.createBook(Integer.parseInt(args[0])));
 
         return false;
     }
