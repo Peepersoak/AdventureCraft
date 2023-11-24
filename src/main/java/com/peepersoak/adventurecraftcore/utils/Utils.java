@@ -13,11 +13,17 @@ import com.sk89q.worldguard.protection.regions.RegionContainer;
 import com.sk89q.worldguard.protection.regions.RegionQuery;
 import net.minecraft.server.level.ServerLevel;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.block.Biome;
 import org.bukkit.craftbukkit.v1_20_R2.CraftWorld;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.trim.ArmorTrim;
+import org.bukkit.inventory.meta.trim.TrimMaterial;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.io.BukkitObjectInputStream;
@@ -27,6 +33,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Utils {
 
@@ -122,6 +130,7 @@ public class Utils {
             return bs.readObject();
         } catch (IOException | ClassNotFoundException e) {
             AdventureCraftCore.getInstance().getLogger().warning("Failed to deserialized data!");
+            e.printStackTrace();
         }
         return null;
     }
@@ -136,6 +145,7 @@ public class Utils {
             return Base64.getEncoder().encodeToString(data);
         } catch (IOException e) {
             AdventureCraftCore.getInstance().getLogger().warning("Failed to serialized data!");
+            e.printStackTrace();
         }
         return null;
     }
@@ -204,5 +214,264 @@ public class Utils {
         for (ItemStack i : items.values()) {
             player.getWorld().dropItemNaturally(player.getLocation(), i);
         }
+    }
+
+    public static boolean isWeapon(Material material) {
+        return isSword(material) || isAxe(material) || isBow(material) || material == Material.TRIDENT;
+    }
+
+    public static boolean isTool(Material material) {
+        return isPickaxe(material) || isAxe(material) || isShovel(material);
+    }
+
+    public static boolean isArmor(Material material) {
+        return isHelmet(material) || isChestplate(material) || isLeggings(material) || isBoots(material);
+    }
+
+    // Helper methods to check specific types
+    private static boolean isSword(Material material) {
+        return material.name().endsWith("_SWORD");
+    }
+
+    private static boolean isAxe(Material material) {
+        return material.name().endsWith("_AXE");
+    }
+
+    private static boolean isBow(Material material) {
+        return material == Material.BOW;
+    }
+
+    private static boolean isPickaxe(Material material) {
+        return material.name().endsWith("_PICKAXE");
+    }
+
+    private static boolean isShovel(Material material) {
+        return material.name().endsWith("_SHOVEL");
+    }
+
+    public static boolean isHelmet(Material material) {
+        return material.name().endsWith("_HELMET");
+    }
+
+    public static boolean isChestplate(Material material) {
+        return material.name().endsWith("_CHESTPLATE");
+    }
+
+    public static boolean isLeggings(Material material) {
+        return material.name().endsWith("_LEGGINGS");
+    }
+
+    public static boolean isBoots(Material material) {
+        return material.name().endsWith("_BOOTS");
+    }
+
+    public static boolean isValidBiome(String biome) {
+        try {
+            Biome.valueOf(biome);
+            return true;
+        } catch (IllegalArgumentException | NullPointerException e) {
+            // This is not a valid biome
+            System.out.println(biome);
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public static boolean isValidBiome(String biome, String worldType) {
+        try {
+            Biome b = Biome.valueOf(biome);
+
+            if (worldType.equalsIgnoreCase("OVERWORLD")) {
+                return AdventureCraftCore.getInstance().getQuestListChecker().isOverworldBiome(b);
+            } else if (worldType.equalsIgnoreCase("THE_NETHER")) {
+                return AdventureCraftCore.getInstance().getQuestListChecker().isNetherBiome(b);
+            } else if (worldType.equalsIgnoreCase("THE_END")) {
+                return AdventureCraftCore.getInstance().getQuestListChecker().isEndBiome(b);
+            }
+        } catch (IllegalArgumentException | NullPointerException e) {
+            // This is not a valid biome
+            System.out.println(biome);
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public static boolean isValidMaterial(String material) {
+        try {
+            Material.valueOf(material);
+            return true;
+        } catch (IllegalArgumentException | NullPointerException e) {
+            System.out.println(material);
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public static boolean isValidEntity(String entityType) {
+        try {
+            EntityType.valueOf(entityType);
+            return true;
+        } catch (IllegalArgumentException | NullPointerException e) {
+            System.out.println(entityType);
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public static boolean validAttribute(String attribute) {
+        try {
+            Attribute.valueOf(attribute);
+            return true;
+        } catch (IllegalArgumentException | NullPointerException e) {
+            System.out.println(attribute);
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public static boolean isValidEnchantment(String enchantment) {
+        Enchantment ench = Enchantment.getByKey(NamespacedKey.minecraft(enchantment));
+        if (ench != null) return true;
+        System.out.println("=================================================");
+        System.out.println(enchantment);
+        System.out.println("=================================================");
+        return false;
+    }
+
+    public static String cleanString(String string) {
+        if (string == null || string.equalsIgnoreCase("")) return "";
+        String[] split = string.split("\\.");
+        String check = string;
+        if (split.length == 2) {
+            check = split[1];
+        }
+        
+        String cleanedString = check
+                .replace("Enchantment.", "")
+                .replace("Attribute.", "")
+                .replace("EntityType.", "")
+                .replace("Material.", "")
+                .replace("Biome.", "");
+
+        String clearColor = ChatColor.stripColor(cleanedString).replace(" ", "_").trim();
+        Pattern pattern = Pattern.compile("([&§]\\S)"); // Pattern to match special characters like "&6"
+        Matcher matcher = pattern.matcher(clearColor);
+
+        String finalStringToReturn = clearColor;
+        while (matcher.find()) {
+            finalStringToReturn = cleanedString.replace(matcher.group(), "");
+        }
+
+        return finalStringToReturn;
+    }
+
+    public static List<String> getLore(String input) {
+        if (input == null || input.equalsIgnoreCase("")) return new ArrayList<>();
+        List<String> resultList = new ArrayList<>();
+        Pattern pattern = Pattern.compile("([&§]\\S)"); // Pattern to match special characters like "&6"
+        String[] words = input.split("\\s+"); // Split the input text into words
+
+        String lastSpecialChar = ""; // Track the last special character
+        // Loop on each word
+
+        StringBuilder lineBuilder = new StringBuilder();
+        int characterCount = 0;
+        for (String currentWord : words) {
+            // Check if it exceed the limit
+            if (characterCount + currentWord.length() > 28) {
+                String colored = Utils.color(lineBuilder.toString().trim());
+                resultList.add(colored);
+                characterCount = 0;
+                lineBuilder.setLength(0);
+            }
+
+            Matcher matcher = pattern.matcher(currentWord);
+            if (matcher.find()) {
+                lastSpecialChar = matcher.group();
+            }
+            lineBuilder.append(lastSpecialChar);
+            lineBuilder.append(currentWord);
+            lineBuilder.append(" ");
+            characterCount += currentWord.length();
+        }
+
+        if (!lineBuilder.isEmpty()) {
+            String colored = Utils.color(lineBuilder.toString().trim());
+            resultList.add(colored);
+        }
+
+        return resultList;
+    }
+
+    public static String convertSecondsToTime(int totalSeconds) {
+        if (totalSeconds < 0) {
+            throw new IllegalArgumentException("Total seconds must be non-negative.");
+        }
+        int hours = totalSeconds / 3600;
+        int minutes = (totalSeconds % 3600) / 60;
+        int seconds = totalSeconds % 60;
+        // Format the time as "hh:mm:ss"
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+    }
+    public static boolean isBetweenTwoNumber(int number, int min, int max) {
+        return number >= min && number <= max;
+    }
+    public static String capitalizeFirstLetter(String input) {
+        if (input == null || input.equalsIgnoreCase("")) {
+            return input;
+        }
+        StringBuilder builder = new StringBuilder();
+        String[] split = input.replace("_", " ").split(" ");
+
+        for (String word : split) {
+            String string = word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase();
+            builder.append(string).append(" ");
+        }
+
+        return builder.toString().trim();
+    }
+    public static boolean isEnchantable(String material, String enchantment) {
+        ItemStack item = new ItemStack(Material.valueOf(material));
+        Enchantment enchant = Enchantment.getByKey(NamespacedKey.minecraft(enchantment));
+        if (enchant == null) return false;
+        return enchant.canEnchantItem(item);
+    }
+
+    public static boolean isCraftable(String material) {
+        ItemStack item = new ItemStack(Material.valueOf(material));
+        List<Recipe> recipes = Bukkit.getRecipesFor(item);
+        return !recipes.isEmpty();
+    }
+
+    public static boolean isValidBreakableBlock(String material) {
+        ItemStack item = new ItemStack(Material.valueOf(material));
+        return item.getType().isSolid();
+    }
+    public static Object getWeightedObject(HashMap<?, Double> weightedMap) {
+        // Calculate total weight
+        double totalWeight = weightedMap.values().stream().mapToDouble(Double::doubleValue).sum();
+
+        Random random = new Random();
+        // Generate a random number between 0 and the total weight
+        double randomValue = random.nextDouble() * totalWeight;
+
+        // Find the rank corresponding to the random number
+        double cumulativeWeight = 0.0;
+        for (Map.Entry<?, Double> entry : weightedMap.entrySet()) {
+            cumulativeWeight += entry.getValue();
+            if (randomValue <= cumulativeWeight) {
+                return entry.getKey();
+            }
+        }
+        // This should not happen, but in case of rounding errors, return the last rank
+        return weightedMap.keySet().iterator().next();
+    }
+
+    public static Object getRanomObject(List<?> list) {
+        if (list.isEmpty()) return null;
+        int total = list.size();
+        Random rand = new Random();
+        int random = rand.nextInt(total);
+        return list.get(random);
     }
 }

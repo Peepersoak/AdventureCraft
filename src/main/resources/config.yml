@@ -28,3 +28,18 @@ Chest_Arrow: 10
 Chest_Arrow_Max: 5
 
 OPEN_AI_KEY: ""
+MODEL: ""
+
+## WIll contain all quest related settings that we can control
+Quest_Settings:
+  ## The duration requirement, player with session duration higher than this will have a possibility of getting those rank quest
+  Rank_Requirement:
+    Common: 3600
+    UnCommon: 21600
+    Rare: 43200
+    Epic: 86400
+    Legendary: 259200
+    Mythical: 432000
+    Fabled: 604800
+    Godlike: 1209600
+    Ascended: 2592000

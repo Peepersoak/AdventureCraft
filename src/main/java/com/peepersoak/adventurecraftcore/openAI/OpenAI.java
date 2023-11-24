@@ -5,6 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
+import com.peepersoak.adventurecraftcore.utils.EnchantmentKeys;
+import com.peepersoak.adventurecraftcore.utils.Utils;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.enchantments.EnchantmentWrapper;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -12,12 +21,19 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
 
 public class OpenAI {
+    private final EnchantmentKeys enchantmentKeys = new EnchantmentKeys();
     private final String OPEN_AI_KEY;
+    private final String OPEN_AI_MODEL;
 
     public OpenAI() {
         OPEN_AI_KEY = AdventureCraftCore.getInstance().getConfig().getString("OPEN_AI_KEY");
+        OPEN_AI_MODEL = AdventureCraftCore.getInstance().getConfig().getString("MODEL");
     }
 
     public String generate(String message, String instruction) {
@@ -48,9 +64,16 @@ public class OpenAI {
             messages.add(system);
             messages.add(user);
 
+//            String gpt3 = "gpt-3.5-turbo-1106";
+//            String gpt4 = "gpt-4-1106-preview";
+
+            ObjectNode format = objectMapper.createObjectNode();
+            format.put("type", "json_object");
+
             ObjectNode objectNode = objectMapper.createObjectNode();
-            objectNode.put("model", "gpt-4-1106-preview");
+            objectNode.put("model", OPEN_AI_MODEL);
             objectNode.set("messages", messages);
+            objectNode.set("response_format", format);
 
             String jsonString = objectMapper.writeValueAsString(objectNode);
 
@@ -71,26 +94,18 @@ public class OpenAI {
             }
             reader.close();
 
-            System.out.println(response);
-
             ObjectMapper reponseMap = new ObjectMapper();
             JsonNode responseNode = reponseMap.readTree(response.toString());
 
             String finalSettings = null;
             if (responseNode.has("choices") && responseNode.get("choices").isArray()) {
                 ArrayNode choices = (ArrayNode) responseNode.get("choices");
-                System.out.println(1);
                 if (!choices.isEmpty()) {
-                    System.out.println(2);
                     JsonNode choice = choices.get(0);
                     if (choice.has("message")) {
-                        System.out.println(3);
                         JsonNode messageObj = choice.get("message");
                         if (messageObj.has("content")) {
-                            System.out.println(3);
-                            String content = messageObj.get("content").asText();
-                            finalSettings = content;
-                            System.out.println("Content: " + content);
+                            finalSettings = messageObj.get("content").asText();
                         }
                     }
                 }
@@ -100,7 +115,522 @@ public class OpenAI {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return null;
+    }
 
+    public QuestData createQuest(String message, UUID playerUUID) {
+        String instruction =
+            """
+            In the vast and ever-changing world of Minecraft, you play the crucial role of the Game Master, overseeing the game and responsible for creating captivating quests and rewards that significantly impact players' adventures in the pixelated realm. These quests and items are categorized into five distinct ranks: Common, Uncommon, Rare, Epic, Legendary, Mythical, Fabled, Godlike, and Ascended. It's essential to align each quest with players' ongoing activities, seamlessly integrating with their current pursuits. Higher-difficulty quests come with more multiple challenging objectives and requirements, often in the range of thousands but with better rewards.
+                
+            When adding color, use the Spigot API color code (e.g., &c for red, &b for aqua etc.).
+                        
+            Here are the list of objectives that you can use:
+            1. Break
+            2. Walk
+            3. Fly
+            4. Kill
+            5. Harvest
+            6. Craft
+            7. Enchant
+            8. Fishing
+                
+            Make sure you only use enum found in Minecraft or Spigot API for Material, EntityType, Biome, Enchantment, and Attribute.
+                
+            Final output should be a valid JSON object.
+            {
+                "Rank": "A color coded quest rank",
+                "Quest Name": "A color coded quest name",
+                "Quest Lore": "A color coded quest lore",
+                "Duration": "The duration for this quest in seconds, higher difficulty have higher duration",
+                
+                // A minimum of 3 objectives is required. Assign a higher number of objectives for higher-ranked quests.
+                "Objectives": [
+                    {
+                        "Objective": "Type of objective (e.g., Break, Kill etc.)"
+                        "Title": "A color coded title",
+                        "Material": "Type of material, If the objective is, Break, Harvest, Craft, Enchant, Fishing",
+                        "EntityType": "Type of the entity if the objective is Kill",
+                        "Enchantment": "Type of enchantment if the objective is Enchant",
+                        "Level" : "Enchantment level required if the objective is Enchant",
+                        "Count": "Target amount (e.g Blocks to break, crops to plant, items to enchant) in numbers, higher rank must have hundreds or thousands of requirements",
+                        "Optional": {
+                            "World": "World type to use, choose one of the following (OVERWORLD, THE_NETHER, THE_END)",
+                            "Biome": "A valid biome found in Spigot API (e.g., Dessert) must be present in the given world type",
+                            "StartY": "Start Y coordinate",
+                            "EndY": "End Y coordinate,
+                            "TimeStart": "Time of day, range (0-23000)",
+                            "TimeEnd": "Time of day, range (0-23000)"
+                        }
+                    }
+                    // Add 2 more objectives.
+                ]
+                "Rewards": {
+                    "Money": "Amount",
+                    "Experience": "Amount",
+                    
+                    // Can be given to any ranks but commonly found in lower ranks
+                    "Regular Items": [
+                        {
+                            "Material": "Material of item found in Spigot API (e.g., DIAMOND_PICKAXE)",
+                            "Amount": "Amount of items to give",
+                        }
+                    ]
+                    
+                    // Custom item is optional, most commonly found in high rank quest.
+                    "Custom Item": {
+                        "Rank": "A color coded rank",
+                        "Type": "Valid Material from Spigot API (e.g., EMERALD)",
+                        "Name": "A color coded name for the item",
+                        "Lore": "A color coded in-depth lore for this item",
+                        "Optional": {
+                            // Optional is most commonly found in high rank items.
+                            "Enchantments": [
+                                {
+                                    "Enchantment": "The enchantment key enum found in Minecraft (e.g., SHARPNESS), can be a negative enchantment (e.g., BINDING_CURSE)"
+                                    "Level": "The enchantment level can range from 1 to 100, higher rank gives higher level, exceeding the default maximum level."
+                                }
+                                // Add more enchantment if needed
+                            ],
+                            "Attributes": [
+                                {
+                                    "Attribute": "This attribute is the enum found in Spigot API, (e.g., GENERIC_MAX_HEALTH). The modifier can be a negative value to balance it out."
+                                    "Modifier": "A double number which can be a positive or negative, to be applied to the attribute (e.g., -0.2)"
+                                }
+                                // Add more attribute if needed
+                            ],
+                            "Trim Pattern": "Choose one from this, SENTRY, VEX, WILD, COAST, DUNE, WAYFINDER, RAISER, SHAPER, HOST, WARD, SILENCE, TIDE, SNOUT, RIB, EYE, SPIRE",
+                            "Trim Material": "Choose one from this, NETHERITE, DIAMOND, EMERALD, GOLD, COPPER, REDSTONE, AMETHYST, IRON, LAPIS, QUARTZ"
+                        },
+                        "Extra Lore": "A color coded lore to give more details about the enchantment and attributes (e.g., The user will gain more vitality)"
+                    }
+                },
+            }
+            """;
+        String dataObject = generate(message, instruction);
+        System.out.println(dataObject);
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode object = mapper.readTree(dataObject);
+
+            String questRank;
+            String questName;
+            String questLore;
+            int duration;
+            int totalDuration;
+
+            // List of objectives
+            // String is the objectives UUID
+            // String is objective key e.g., Material, EntityTYpe, Title etc.
+            // Object is the objective value e.g., DIAMOND, ZOMBIE
+            HashMap<UUID, Objective> allObjectives = new HashMap<>();
+
+            // Get the all quest data
+            if (!object.has(ObjectiveStrings.QUEST_RANK)) {
+                System.out.println("NO RANK");
+                return null;
+            }
+            questRank = object.get(ObjectiveStrings.QUEST_RANK).asText();
+
+            if (!object.has(ObjectiveStrings.QUEST_NAME)) {
+                System.out.println("NO NAME");
+                return null;
+            }
+            questName = object.get(ObjectiveStrings.QUEST_NAME).asText();
+
+            if (!object.has(ObjectiveStrings.QUEST_LORE)) {
+                System.out.println("NO LORE");
+                return null;
+            }
+            questLore = object.get(ObjectiveStrings.QUEST_LORE).asText();
+
+            if (!object.has(ObjectiveStrings.QUEST_DURATION)) {
+                System.out.println("NO DURATION");
+                return null;
+            }
+            duration = object.get(ObjectiveStrings.QUEST_DURATION).asInt();
+            if (duration <= 600) {
+                duration = 600;
+            } else if (duration > 86400) {
+                duration = 86400;
+            }
+            totalDuration = duration;
+
+            // Get the objectives
+            if (!object.has(ObjectiveStrings.QUEST_OBJECTIVES) || !object.get(ObjectiveStrings.QUEST_OBJECTIVES).isArray()) {
+                System.out.println("NO OBJECTIVES");
+                return null;
+            }
+
+            ArrayNode listOfObjectives = (ArrayNode) object.get(ObjectiveStrings.QUEST_OBJECTIVES);
+            for (int i = 0; i < listOfObjectives.size() ; i ++) {
+                // This is the objective json object
+                JsonNode objective = listOfObjectives.get(i);
+
+                // This is the objective type like Break, Walk
+                String type = null;
+                String title = null;
+                String material = null;
+                String entityType = null;
+                String enchantment = null;
+                int level = -1;
+                int count = -1;
+                int totalCount = -1;
+                String world = null;
+                String biome = null;
+                int startY = -300;
+                int endY = -300;
+                int timeStart = -1;
+                int timeEnd = -1;
+
+                if (!objective.has(ObjectiveStrings.QUEST_OBJECTIVE)) continue;
+                type = objective.get(ObjectiveStrings.QUEST_OBJECTIVE).asText();
+                if (!AdventureCraftCore.getInstance().getQuestListChecker().isValidObjective(type)) continue;
+
+                if (!objective.has(ObjectiveStrings.QUEST_OBJECTIVE_TITLE)) continue;
+                title = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_TITLE).asText();
+
+
+                if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_BREAK) ||
+                type.equalsIgnoreCase(ObjectiveStrings.TYPE_PLACE) ||
+                type.equalsIgnoreCase(ObjectiveStrings.TYPE_HARVEST) ||
+                type.equalsIgnoreCase(ObjectiveStrings.TYPE_PLANT) ||
+                type.equalsIgnoreCase(ObjectiveStrings.TYPE_CRAFT) ||
+                type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT) ||
+                type.equalsIgnoreCase(ObjectiveStrings.TYPE_FISHING)) {
+                    if (!objective.has(ObjectiveStrings.QUEST_OBJECTIVE_MATERIAL)) continue;
+                    String givenMaterial = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_MATERIAL).asText();
+                    if (givenMaterial == null) continue;
+                    String convert = Utils.cleanString(givenMaterial).toUpperCase();
+                    if (!Utils.isValidMaterial(convert)) continue;
+                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_CRAFT)) {
+                        if (!Utils.isCraftable(convert)) continue;
+                    }
+                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_HARVEST)) {
+                        if (!AdventureCraftCore.getInstance().getQuestListChecker().isHarvestable(convert)) continue;
+                    }
+                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_BREAK) || type.equalsIgnoreCase(ObjectiveStrings.TYPE_PLACE)) {
+                        if (AdventureCraftCore.getInstance().getQuestListChecker().isUnbreakable(convert)) continue;
+                    }
+                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_FISHING)) {
+                        if (!AdventureCraftCore.getInstance().getQuestListChecker().getFishable(convert)) continue;
+                    }
+                    material = convert;
+                }
+
+                if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_KILL)) {
+                    if (!objective.has(ObjectiveStrings.QUEST_OBJECTIVE_ENTITY_TYPE)) continue;
+                    String givenEntityType = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_ENTITY_TYPE).asText();
+                    material = AdventureCraftCore.getInstance().getQuestListChecker().getRandomWeapon().getKey().getKey();
+                    if (givenEntityType == null) continue;
+                    String convert = Utils.cleanString(givenEntityType).toUpperCase();
+                    if (!Utils.isValidEntity(convert)) continue;
+                    if (AdventureCraftCore.getInstance().getQuestListChecker().isDisabledEntity(convert)) continue;
+                    entityType = convert;
+                }
+
+                if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
+                    if (!objective.has(ObjectiveStrings.QUEST_OBJECTIVE_ENCHANTMENT) || !objective.has(ObjectiveStrings.QUEST_OBJECTIVE_LEVEL)) continue;
+                    String rawEnchantment = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_ENCHANTMENT).asText();
+                    enchantment = enchantmentKeys.convertToMinecraftKey(Utils.cleanString(rawEnchantment));
+                    level = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_LEVEL).asInt();
+                    if (!Utils.isValidEnchantment(enchantment)) continue;
+                    Enchantment en = EnchantmentWrapper.getByKey(NamespacedKey.minecraft(enchantment));
+                    if (en == null) continue;
+                    if (AdventureCraftCore.getInstance().getQuestListChecker().isForbiddenEnchantment(en)) continue;
+                    if (en.isTreasure() || !en.canEnchantItem(new ItemStack(Material.valueOf(Utils.cleanString(material))))) continue;
+                    int maxLevel = AdventureCraftCore.getInstance().getQuestListChecker().getMaxLevelEnchantment(en);
+                    if (level > maxLevel) level = maxLevel;
+                    if (!Utils.isEnchantable(material, enchantment)) continue;
+                }
+
+                if (!objective.has(ObjectiveStrings.QUEST_OBJECTIVE_COUNT)) continue;
+                count = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_COUNT).asInt();
+                totalCount = count;
+
+                if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_FLY) || type.equalsIgnoreCase(ObjectiveStrings.TYPE_WALK)) {
+                    // Seconds to walk and run will get the minimum number between the given goal and the duration
+                    // Basically the duration to run will either be the given but if it exceeds the duration it will be the duration
+                    // Then it will add another 300 seconds which is 5 minutes. To make sure there's at least 5 minutes difference
+                    count = Math.min(count, duration) + 300;
+                }
+
+                if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.COMMON)) {
+                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
+                        count = Math.max(Math.min(count, 5), 2);
+                    }
+                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.UNCOMMON)) {
+                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
+                        count = Math.max(Math.min(count, 5), 3);
+                    }
+                    duration = Math.max(duration, 900);
+                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.RARE)) {
+                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
+                        count = Math.max(Math.min(count, 8), 5);
+                    }
+                    duration = Math.max(duration, 1800);
+                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.EPIC)) {
+                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
+                        count = Math.max(Math.min(count, 12), 8);
+                    }
+                    duration = Math.max(duration, 3600);
+                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.LEGENDARY)) {
+                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
+                        count = Math.max(Math.min(count, 15), 10);
+                    }
+                    duration = Math.max(duration, 7200);
+                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.MYTHICAL)) {
+                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
+                        count = Math.max(Math.min(count, 18), 12);
+                    }
+                    duration = Math.max(duration, 10800);
+                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.FABLED)) {
+                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
+                        count = Math.max(Math.min(count, 20), 15);
+                    }
+                    duration = Math.max(duration, 14400);
+                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.GODLIKE)) {
+                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
+                        count = Math.max(Math.min(count, 30), 20);
+                    }
+                    duration = Math.max(duration, 21600);
+                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.ASCENDED)) {
+                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
+                        count = Math.max(Math.min(count, 50), 30);
+                    }
+                    duration = Math.max(duration, 28800);
+                } else {
+                    count = Math.max(count, 5);
+                }
+
+                System.out.println(objective);
+                System.out.println("Checking Options");
+                // This are the optional requirements
+                boolean hasOptions = objective.has(ObjectiveStrings.QUEST_OBJECTIVE_OPTIONS);
+                if (hasOptions) {
+                    JsonNode options = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_OPTIONS);
+
+                    System.out.println("Has Options");
+                    boolean hasWorldOptions = options.has(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_WORLD);
+                    boolean isKill = type.equals("Kill");
+
+                    if (hasWorldOptions && !isKill) {
+                        String givenWorld = options.get(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_WORLD).asText();
+                        if (givenWorld != null) {
+                            String convert = Utils.cleanString(givenWorld).toUpperCase();
+                            if (convert.equalsIgnoreCase("OVERWORLD") || convert.equalsIgnoreCase("THE_NETHER") || convert.equalsIgnoreCase("THE_END")) {
+                                world = convert;
+                            }
+                        }
+                    }
+
+                    boolean hasBiomeOptions = options.has(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_BIOME);
+
+                    if (hasBiomeOptions && !isKill) {
+                        String givenBiome = options.get(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_BIOME).asText();
+                        if (givenBiome != null) {
+                            String covert = Utils.cleanString(givenBiome).toUpperCase();
+                            if (world != null) {
+                                if (Utils.isValidBiome(covert, world)) {
+                                    biome = covert;
+                                }
+                            } else {
+                                if (Utils.isValidBiome(covert)) {
+                                    biome = covert;
+                                }
+                            }
+                        }
+                    }
+                    if (objective.has(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_START_Y)) {
+                        startY = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_START_Y).asInt();
+                    }
+                    if (objective.has(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_END_Y)) {
+                        endY = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_END_Y).asInt();
+                    }
+                    if (objective.has(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_TIME_START)) {
+                        timeStart = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_TIME_START).asInt();
+                    }
+                    if (objective.has(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_TIME_END)) {
+                        timeEnd = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_TIME_END).asInt();
+                    }
+                }
+
+                UUID objectiveUUID = UUID.randomUUID();
+                Objective finalObjective = new Objective(
+                        type,
+                        title,
+                        material,
+                        entityType,
+                        enchantment,
+                        level,
+                        count,
+                        totalCount,
+                        world,
+                        biome,
+                        startY,
+                        endY,
+                        timeStart,
+                        timeEnd,
+                        objectiveUUID
+                );
+                allObjectives.put(objectiveUUID, finalObjective);
+            }
+
+            // No registered objectives
+            if (allObjectives.isEmpty()) {
+                System.out.println("NO REGISTERED OBJECTIVES");
+                return null;
+            }
+
+            // Get the rewards
+            if (!object.has(ObjectiveStrings.QUEST_REWARDS)) {
+                System.out.println("NO REWARDS");
+                return null;
+            }
+            JsonNode rewards = object.get(ObjectiveStrings.QUEST_REWARDS);
+
+            int money = 1000;
+            if (rewards.has(ObjectiveStrings.QUEST_REWARDS_MONEY)) {
+                money =  rewards.get(ObjectiveStrings.QUEST_REWARDS_MONEY).asInt();
+                money = Math.min(money, 500000);
+            }
+
+            int experience = 5000;
+            if (rewards.has(ObjectiveStrings.QUEST_REWARDS_EXPERIENCE)) {
+                experience = rewards.get(ObjectiveStrings.QUEST_REWARDS_EXPERIENCE).asInt();
+                experience = Math.min(experience, 100000);
+            }
+
+            // This is the list of items in this structure material:amount
+            List<String> regularItemList = new ArrayList<>();
+            // Array of regular items
+            if (rewards.has(ObjectiveStrings.QUEST_REWARDS_REGULAR_ITEMS) && rewards.get(ObjectiveStrings.QUEST_REWARDS_REGULAR_ITEMS).isArray()) {
+                ArrayNode itemsObject = (ArrayNode) rewards.get(ObjectiveStrings.QUEST_REWARDS_REGULAR_ITEMS);
+                for (JsonNode itemData : itemsObject) {
+                    if (!itemData.has(ObjectiveStrings.QUEST_REWARDS_REGULAR_ITEMS_MATERIAL) || !itemData.has(ObjectiveStrings.QUEST_REWARDS_REGULAR_ITEMS_AMOUNT)) continue;
+                    String material = itemData.get(ObjectiveStrings.QUEST_REWARDS_REGULAR_ITEMS_MATERIAL).asText();
+                    String convert = Utils.cleanString(material).toUpperCase();
+                    int amount = itemData.get(ObjectiveStrings.QUEST_REWARDS_REGULAR_ITEMS_AMOUNT).asInt();
+                    // Add the item
+                    if (Utils.isValidMaterial(convert)) {
+                        regularItemList.add(convert + ":" + amount);
+                    }
+                }
+            }
+
+            CustomItem item = null;
+            // Custom Item
+            if (rewards.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM)) {
+                JsonNode customItem = rewards.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM);
+                String itemRank = null;
+                String itemType = null;
+                String itemName = null;
+                String itemLore = null;
+                String extraLore = null;
+
+                String trimPattern = null;
+                String trimMaterial = null;
+
+                List<String> enchantments = new ArrayList<>();
+                List<String> attributes = new ArrayList<>();
+
+                if (customItem.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_RANK)) {
+                    itemRank = customItem.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_RANK).asText();
+                }
+                if (customItem.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_TYPE)) {
+                    itemType = customItem.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_TYPE).asText();
+                }
+                if (customItem.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_NAME)) {
+                    itemName = customItem.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_NAME).asText();
+                }
+                if (customItem.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_LORE)) {
+                    itemLore = customItem.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_LORE).asText();
+                }
+                if (customItem.has(ObjectiveStrings.QUEST_REWRADS_CUSTOM_ITEM_OPTIONS)) {
+                    JsonNode options = customItem.get(ObjectiveStrings.QUEST_REWRADS_CUSTOM_ITEM_OPTIONS);
+
+                    if (options.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ENCHANTMENTS) &&
+                            options.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ENCHANTMENTS).isArray()) {
+                        ArrayNode enchantmentDataList = (ArrayNode) options.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ENCHANTMENTS);
+                        for (JsonNode enchantmenData : enchantmentDataList) {
+                            if (enchantmenData.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ENCHANTMENT) &&
+                            enchantmenData.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_LEVEL)) {
+                                String enchantment = enchantmenData.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ENCHANTMENT).asText();
+                                String convert = enchantmentKeys.convertToMinecraftKey(Utils.cleanString(enchantment));
+                                int level = enchantmenData.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_LEVEL).asInt();
+                                if (Utils.isValidEnchantment(convert)) {
+                                    enchantments.add(convert + ":" + level);
+                                }
+                            }
+                        }
+                    }
+                    if (options.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ATTRIBUTES) &&
+                            options.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ATTRIBUTES).isArray()) {
+                        ArrayNode attributesDataList = (ArrayNode) options.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ATTRIBUTES);
+                        for (JsonNode attributeData : attributesDataList) {
+                            if (attributeData.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ATTRIBUTE) &&
+                            attributeData.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_MODIFIER)) {
+                                String attribute = attributeData.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ATTRIBUTE).asText();
+                                String covert = Utils.cleanString(attribute).toUpperCase();
+                                int modifier = attributeData.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_MODIFIER).asInt();
+                                if (modifier == 0) continue;
+                                if (Utils.validAttribute(covert)) {
+                                    attributes.add(covert + ":" + modifier);
+                                }
+                            }
+                        }
+                    }
+                    if (options.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_TRIM_PATTERN) && options.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_TRIM_MATERIAL)) {
+                        String pattern = options.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_TRIM_PATTERN).asText();
+                        String material = options.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_TRIM_MATERIAL).asText();
+                        if (AdventureCraftCore.getInstance().getQuestListChecker().getTrimMaterial(material) != null &&
+                        AdventureCraftCore.getInstance().getQuestListChecker().getTrimPattern(pattern) != null) {
+                            trimPattern = pattern;
+                            trimMaterial = material;
+                        }
+                    }
+                }
+                if (customItem.has(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_EXTRA_LORE)) {
+                    extraLore = customItem.get(ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_EXTRA_LORE).asText();
+                }
+
+                if (itemRank != null &&
+                itemType != null &&
+                itemName != null &&
+                itemLore != null) {
+                    // Item is valid
+                    item = new CustomItem(
+                            itemRank,
+                            itemType,
+                            itemName,
+                            itemLore,
+                            extraLore,
+                            enchantments,
+                            attributes,
+                            trimPattern,
+                            trimMaterial
+                    );
+                }
+            }
+
+            UUID questUUID = UUID.randomUUID();
+            return new QuestData(questRank,
+                    questName,
+                    questLore,
+                    duration,
+                    totalDuration,
+                    money,
+                    experience,
+                    allObjectives,
+                    item,
+                    regularItemList,
+                    false,
+                    questUUID,
+                    playerUUID);
+        } catch (Exception e) {
+            System.out.println("Not a valid json");
+            e.printStackTrace();
+        }
         return null;
     }
 }

@@ -8,10 +8,7 @@ import com.peepersoak.adventurecraftcore.dungeon.DungeonRunnable;
 import com.peepersoak.adventurecraftcore.dungeon.DungeonSettings;
 import com.peepersoak.adventurecraftcore.enchantment.crafting.events.CraftingHandler;
 import com.peepersoak.adventurecraftcore.enchantment.store.OpenStore;
-import com.peepersoak.adventurecraftcore.openAI.OnGoingQuest;
-import com.peepersoak.adventurecraftcore.openAI.OpenAI;
-import com.peepersoak.adventurecraftcore.openAI.Quest;
-import com.peepersoak.adventurecraftcore.openAI.QuestCommand;
+import com.peepersoak.adventurecraftcore.openAI.*;
 import com.peepersoak.adventurecraftcore.utils.*;
 import com.peepersoak.adventurecraftcore.world.AntiAFK;
 import net.milkbowl.vault.economy.Economy;
@@ -21,10 +18,8 @@ import org.bukkit.WorldCreator;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 public final class AdventureCraftCore extends JavaPlugin {
     private static Economy econ = null;
@@ -32,12 +27,15 @@ public final class AdventureCraftCore extends JavaPlugin {
     private final EventHandler eventHandler = new EventHandler();
     private final CraftingHandler craftingHandler = new CraftingHandler();
     private final Nightmare nightmare = new Nightmare();
+    private QuestListChecker questListChecker;
     private OnGoingQuest onGoingQuest;
     private OpenStore openStore;
     private DungeonEvents dungeonEvents;
     private Data dungeonSetting;
     private Data onGoingQuestData;
+    private Data allQuestData;
     private OpenAI openai;
+    private QuestSetting questSetting;
 
     @Override
     public void onEnable() {
@@ -45,6 +43,8 @@ public final class AdventureCraftCore extends JavaPlugin {
         getConfig().options().copyDefaults();
         saveDefaultConfig();
 
+        questSetting = new QuestSetting(getConfig());
+        questListChecker = new QuestListChecker();
         openai = new OpenAI();
 
         loadYMLFiles();
@@ -76,6 +76,10 @@ public final class AdventureCraftCore extends JavaPlugin {
 
         Bukkit.getPluginManager().registerEvents(new AntiAFK(), this);
 
+        // Register Quest Events
+        Bukkit.getPluginManager().registerEvents(new QuestEvents(), this);
+        Bukkit.getPluginManager().registerEvents(new QuestTracker(), this);
+
 //        worldTime.runTaskTimer(this, 0, 20);
         nightmare.runTaskTimer(this, 0, 60);
 
@@ -103,12 +107,16 @@ public final class AdventureCraftCore extends JavaPlugin {
     public void loadYMLFiles() {
         dungeonSetting = new Data(FileName.DUNGEON_SETTINGS);
         onGoingQuestData = new Data(FileName.ONGOING_QUEST);
+        allQuestData = new Data(FileName.ALL_REGISTERED_QUEST);
     }
 
     public Data getDungeonSetting() {
         return dungeonSetting;
     }
     public Data getOnGoingQuestData() { return  onGoingQuestData; }
+    public Data getAllQuestData() {
+        return allQuestData;
+    }
 
     public static AdventureCraftCore getInstance() {
         return instance;
@@ -151,5 +159,11 @@ public final class AdventureCraftCore extends JavaPlugin {
     public OpenAI getOpenai() { return openai; }
     public OnGoingQuest getOnGoingQuest() {
         return onGoingQuest;
+    }
+    public QuestListChecker getQuestListChecker() {
+        return questListChecker;
+    }
+    public QuestSetting getQuestSetting() {
+        return questSetting;
     }
 }
