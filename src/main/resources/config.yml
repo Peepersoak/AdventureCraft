@@ -32,6 +32,8 @@ MODEL: ""
 
 ## WIll contain all quest related settings that we can control
 Quest_Settings:
+  ## How often each player will try to request a new Quest
+  Frequency: 2000
   ## The duration requirement, player with session duration higher than this will have a possibility of getting those rank quest
   Rank_Requirement:
     Common: 3600

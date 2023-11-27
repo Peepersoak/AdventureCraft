@@ -41,8 +41,13 @@ public class QuestEvents implements Listener {
     public void onQuestClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player player)) return;
         String inventoryName = e.getView().getTitle();
-        if (!inventoryName.equalsIgnoreCase(ObjectiveStrings.QUEST_INVENTORY_NAME)) return;
+
+        boolean isPersonalBoard = inventoryName.equalsIgnoreCase(ObjectiveStrings.QUEST_PERSONAL_BOARD);
+        boolean isAdventureCraftBoard = inventoryName.equalsIgnoreCase(ObjectiveStrings.QUEST_ADVENTURECRAFT_BOARD);
+
+        if (!isPersonalBoard && !isAdventureCraftBoard) return;
         e.setCancelled(true);
+
         ItemStack questPaper = e.getCurrentItem();
         if (questPaper == null) return;
         ItemMeta meta = questPaper.getItemMeta();
@@ -53,25 +58,32 @@ public class QuestEvents implements Listener {
         UUID questUUID = UUID.fromString(questUUIDRaw);
         UUID playerUUID = e.getWhoClicked().getUniqueId();
 
-        // Check first if the quest is complete and give the rewards
-        QuestData questData = AdventureCraftCore.getInstance().getOnGoingQuest().getQuest(playerUUID, questUUID);
-        if (questData == null) return;
-        if (questData.isDone()) {
-            player.closeInventory();
-            questData.collectRewards(player);
-            return;
+        if (isPersonalBoard) {
+            // Check first if the quest is complete and give the rewards
+            QuestData questData = AdventureCraftCore.getInstance().getOnGoingQuest().getQuest(playerUUID, questUUID);
+            if (questData == null) return;
+            if (questData.isDone()) {
+                player.closeInventory();
+                questData.collectRewards(player);
+                return;
+            }
+
+            // Deactive all quest aside from the quest is being activated
+            List<QuestData> getAllQuest = AdventureCraftCore.getInstance().getOnGoingQuest().getAllQuest(playerUUID);
+            if (getAllQuest == null || getAllQuest.isEmpty()) return;
+            getAllQuest.forEach(quest -> {
+                if (quest.getQuestUUID().equals(questUUID)) {
+                    quest.activateQuest(player);
+                } else {
+                    quest.deactiveQuest(player, false);
+                }
+            });
         }
 
-        // Deactive all quest aside from the quest is being activated
-        List<QuestData> getAllQuest = AdventureCraftCore.getInstance().getOnGoingQuest().getAllQuest(playerUUID);
-        if (getAllQuest == null || getAllQuest.isEmpty()) return;
-        getAllQuest.forEach(quest -> {
-            if (quest.getQuestUUID().equals(questUUID)) {
-                quest.activateQuest(player);
-            } else {
-                quest.deactiveQuest(player, false);
-            }
-        });
+        if (isAdventureCraftBoard) {
+            AdventureCraftCore.getInstance().getQuestManager().getQuest(player, questUUID);
+        }
+
         player.closeInventory();
     }
 
@@ -118,6 +130,7 @@ public class QuestEvents implements Listener {
 
         if (!hasWalkPerm && !hasFlyPerm) return;
         if (hasFlyPerm && !player.isGliding()) return;
+        if (hasWalkPerm && player.isGliding()) return;
         // This will only proceed every seconds
         if (coolDown.containsKey(playerUUID)) {
             if (coolDown.get(playerUUID) > systemTime) return;
@@ -195,9 +208,15 @@ public class QuestEvents implements Listener {
     public void onCraft(CraftItemEvent e) {
         if (!(e.getWhoClicked() instanceof Player player)) return;
 
+
         boolean hasPermission = checkPermission(player, ObjectiveStrings.CRAFT_QUEST_PERMISSION);
         if (!hasPermission) return;
 
+        /**
+         * TODO The formula below will not work properly on item that can't be stack
+         * Since it will calculate base on the number of items present or the possible item that can be crafted
+         * it should also consider the invotry space and how much item it can create
+         * */
         int defaultAmount = e.getRecipe().getResult().getAmount();
         int totalAmount = defaultAmount;
         if (e.isShiftClick()) {

@@ -8,6 +8,7 @@ import com.peepersoak.adventurecraftcore.items.wards.WardFactory;
 import com.peepersoak.adventurecraftcore.utils.Flags;
 import com.peepersoak.adventurecraftcore.utils.StringPath;
 import com.peepersoak.adventurecraftcore.utils.Utils;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.BlockState;
@@ -56,20 +57,6 @@ public class DungeonEvents implements CommandExecutor, Listener {
         chestType.add(Material.SHULKER_BOX);
 
         runPlayerUpdater();
-
-        dungeonCoin.addUnsafeEnchantment(Enchantment.DURABILITY, 0);
-        ItemMeta meta = dungeonCoin.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(Utils.color("&4Dungeon Coins"));
-
-            List<String> lore = new ArrayList<>();
-            lore.add(Utils.color("&cYou can sell this"));
-            lore.add(Utils.color("&cto the dungeon master"));
-            meta.setLore(lore);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-            dungeonCoin.setItemMeta(meta);
-        }
-
         runEntityCounter();
         createDungeonLife();
 
@@ -96,7 +83,6 @@ public class DungeonEvents implements CommandExecutor, Listener {
     private final ArrowFactory arrowFactory = new ArrowFactory();
     private final List<Material> chestType = new ArrayList<>();
     private int maxEntityCount = 0;
-    private final ItemStack dungeonCoin = new ItemStack(Material.SUNFLOWER);
     private ItemStack dungeonLife;
     private final NamespacedKey BOSS_PERSISTENT_DATA = new NamespacedKey(AdventureCraftCore.getInstance(), "BossData");
     private final NamespacedKey DUNGEON_LIFE_COUNT = new NamespacedKey(AdventureCraftCore.getInstance(), "DungeonLifeCount");
@@ -180,9 +166,6 @@ public class DungeonEvents implements CommandExecutor, Listener {
                     }
                     inv.setContents(eggs.toArray(new ItemStack[0]));
                     player.openInventory(inv);
-                }
-                else if (type.equalsIgnoreCase("coin")) {
-                    player.getInventory().addItem(dungeonCoin);
                 }
                 else if (type.equalsIgnoreCase("life")) {
                     player.getInventory().addItem(dungeonLife);
@@ -350,8 +333,11 @@ public class DungeonEvents implements CommandExecutor, Listener {
             double amount = Utils.getRandomDouble(maxAmount, minAmount);
             amount = Math.round(amount * 100.0) / 100.0;
 
-            AdventureCraftCore.getEconomy().depositPlayer(player, amount);
-            player.sendMessage(Utils.color("&8You earned &6" + amount));
+            Economy economy = AdventureCraftCore.getInstance().getEconomy();
+            if (economy != null) {
+                economy.depositPlayer(player, amount);
+                player.sendMessage(Utils.color("&8You earned &6" + amount));
+            }
         }
 
         double itemAmount = Utils.getRandom(5, 1);

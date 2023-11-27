@@ -7,31 +7,11 @@ public class ObjectiveStrings {
 
     public final static NamespacedKey PDC_QUEST_UUID = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.UUID");
     public final static NamespacedKey PDC_CUSTOM_ITEM = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.CustomItem");
-
-    public final static NamespacedKey kEY_PLACING = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Place");
-    public final static NamespacedKey KEY_BREAKING = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Break");
-    public final static NamespacedKey KEY_SEND_DAMAGE = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.SendDamage");
-    public final static NamespacedKey KEY_KILLING = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Killed");
-    public final static NamespacedKey KEY_GET_DAMAGE = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.GetDamage");
-    public final static NamespacedKey KEY_DYING = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Dying");
-    public final static NamespacedKey KEY_CONSUMING = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Consuming");
-    public final static NamespacedKey KEY_CRAFTING = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Crafting");
-    public final static NamespacedKey KEY_SUMMONING = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Summoning");
-    public final static NamespacedKey KEY_ENCHANTING = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Enchanting");
-    public final static NamespacedKey KEY_ANVIL = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Anvil");
-    public final static NamespacedKey KEY_SMITHING = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Smithing");
-    public final static NamespacedKey KEY_CARTOGRAPHY = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Cartography");
-    public final static NamespacedKey KEY_STONECUTTER = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.StoneCutter");
-    public final static NamespacedKey KEY_GRINDSTONE = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.GrindStone");
-    public final static NamespacedKey KEY_LOOM = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Loom");
-    public final static NamespacedKey KEY_SMOKER = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Smoker");
-    public final static NamespacedKey KEY_FURNACE = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Furnace");
-    public final static NamespacedKey KEY_BLASTFURNACE = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.BlastFurnace");
-    public final static NamespacedKey KEY_TRADING = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.Trading");
     public final static NamespacedKey KEY_SESSION_DURATION = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.SessionDuration");
+    public final static NamespacedKey KEY_GENERAL_FREQUENCY = new NamespacedKey(AdventureCraftCore.getInstance(), "AC.Quest.Tracking.GeneralTracking");
 
-    public final static String QUEST_INVENTORY_NAME = "My Quests";
     public final static String QUEST_ADVENTURECRAFT_BOARD = "AdventureCraft Quests Board";
+    public final static String QUEST_PERSONAL_BOARD = "My Quest Board";
 
     public final static String BREAK_QUEST_PERMISSION = "AC.Objectives.Break";
     public final static String PLACE_QUEST_PERMISSION = "AC.Objectives.Place";

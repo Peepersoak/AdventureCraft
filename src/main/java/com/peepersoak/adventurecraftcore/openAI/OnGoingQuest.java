@@ -5,174 +5,35 @@ import com.peepersoak.adventurecraftcore.utils.Data;
 import com.peepersoak.adventurecraftcore.utils.Utils;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
 
 public class OnGoingQuest {
+
     private final HashMap<UUID, List<QuestData>> onGoingQuest = new HashMap<>();
-    private final HashMap<String, Double> ranks = new HashMap<>();
+
     private final OpenAI openAI = new OpenAI();
     private final Data questData;
+    private final Data allQuestData;
+    private final Random random = new Random();
     public OnGoingQuest() {
         questData = AdventureCraftCore.getInstance().getOnGoingQuestData();
+        allQuestData = AdventureCraftCore.getInstance().getAllQuestData();
+
         startSavingQuest();
         restoreQuest();
-
-        ranks.put(ObjectiveStrings.COMMON, 20.0);
-        ranks.put(ObjectiveStrings.UNCOMMON, 18.0);
-        ranks.put(ObjectiveStrings.RARE, 15.0);
-        ranks.put(ObjectiveStrings.EPIC, 4.0);
-        ranks.put(ObjectiveStrings.LEGENDARY, 1.0);
-        ranks.put(ObjectiveStrings.MYTHICAL, 0.2);
-        ranks.put(ObjectiveStrings.FABLED, 0.03);
-        ranks.put(ObjectiveStrings.GODLIKE, 0.005);
-        ranks.put(ObjectiveStrings.ASCENDED, 0.001);
     }
-    private void restoreQuest() {
+
+    // This will restore all player related quest
+    public void restoreQuest() {
         for (String uuid : questData.getConfig().getKeys(false)) {
             String startingPath = uuid + ".";
             ConfigurationSection questSection = questData.getConfig().getConfigurationSection(uuid);
-            UUID playerUUID = UUID.fromString(uuid);
-
             if (questSection == null) continue;
-
-            List<QuestData> questList = new ArrayList<>();
-
-            for (String questUUIDKey : questSection.getKeys(false)) {
-                String questSettingPath = startingPath + questUUIDKey + ".";
-
-                String questDifficultyPath = questSettingPath + ObjectiveStrings.QUEST_RANK;
-                String questTitlePath = questSettingPath + ObjectiveStrings.QUEST_NAME;
-                String questDescriptionPath = questSettingPath + ObjectiveStrings.QUEST_LORE;
-                String questDurationPath = questSettingPath + ObjectiveStrings.QUEST_DURATION;
-                String questTotalDurationPath = questSettingPath + ObjectiveStrings.QUEST_TOTAL_DURATION;
-                String questIsActivePath = questSettingPath + ObjectiveStrings.QUEST_ACTIVE;
-
-                String questRank = questData.getConfig().getString(questDifficultyPath);
-                String questName = questData.getConfig().getString(questTitlePath);
-                String questLore = questData.getConfig().getString(questDescriptionPath);
-                int duration = questData.getConfig().getInt(questDurationPath);
-                int totalDuration = questData.getConfig().getInt(questTotalDurationPath);
-                boolean isActive = questData.getConfig().getBoolean(questIsActivePath);
-
-                HashMap<UUID, Objective> listOfAllObjectives = new HashMap<>();
-
-                String objectivesPath = questSettingPath + "Objectives";
-
-                ConfigurationSection listOfObjectives = questData.getConfig().getConfigurationSection(objectivesPath);
-                if (listOfObjectives != null) {
-                    for (String objectivesUUID : listOfObjectives.getKeys(false)) {
-                        String path = objectivesPath + "." + objectivesUUID + ".";
-
-                        String objectivePath = path + ObjectiveStrings.QUEST_OBJECTIVE;
-                        String titlePath = path + ObjectiveStrings.QUEST_OBJECTIVE_TITLE;
-                        String materialPath = path + ObjectiveStrings.QUEST_OBJECTIVE_MATERIAL;
-                        String entityTypePath = path + ObjectiveStrings.QUEST_OBJECTIVE_ENTITY_TYPE;
-                        String enchantmentPath = path + ObjectiveStrings.QUEST_OBJECTIVE_ENCHANTMENT;
-                        String levelPath = path + ObjectiveStrings.QUEST_OBJECTIVE_LEVEL;
-                        String countPath = path + ObjectiveStrings.QUEST_OBJECTIVE_COUNT;
-                        String totalCountPath = path + ObjectiveStrings.QUEST_OBJECTIVE_TOTAL_COUNT;
-                        String worldPath = path + ObjectiveStrings.QUEST_OBJECTIVE_OPTION_WORLD;
-                        String biomePath = path + ObjectiveStrings.QUEST_OBJECTIVE_OPTION_BIOME;
-                        String startYPath = path + ObjectiveStrings.QUEST_OBJECTIVE_OPTION_START_Y;
-                        String endYPath = path + ObjectiveStrings.QUEST_OBJECTIVE_OPTION_END_Y;
-                        String timeStartPath = path + ObjectiveStrings.QUEST_OBJECTIVE_OPTION_TIME_START;
-                        String timeEndPath = path + ObjectiveStrings.QUEST_OBJECTIVE_OPTION_TIME_END;
-
-                        String objective = questData.getConfig().getString(objectivePath);
-                        String title = questData.getConfig().getString(titlePath);
-                        String material = questData.getConfig().getString(materialPath);
-                        String entityType = questData.getConfig().getString(entityTypePath);
-                        String enchantment = questData.getConfig().getString(enchantmentPath);
-                        int level = questData.getConfig().getInt(levelPath);
-                        int count = questData.getConfig().getInt(countPath);
-                        int totalCount = questData.getConfig().getInt(totalCountPath);
-                        String world = questData.getConfig().getString(worldPath);
-                        String biome = questData.getConfig().getString(biomePath);
-                        int startY = questData.getConfig().getInt(startYPath);
-                        int endY = questData.getConfig().getInt(endYPath);
-                        int timeStart = questData.getConfig().getInt(timeStartPath);
-                        int timeEnd = questData.getConfig().getInt(timeEndPath);
-
-                        Objective obj = new Objective(
-                                objective,
-                                title,
-                                material,
-                                entityType,
-                                enchantment,
-                                level,
-                                count,
-                                totalCount,
-                                world,
-                                biome,
-                                startY,
-                                endY,
-                                timeStart,
-                                timeEnd,
-                                UUID.fromString(objectivesUUID)
-                        );
-
-                        listOfAllObjectives.put(obj.getObjectiveUUID(), obj);
-                    }
-                }
-
-                String questMoneyRewardPath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_MONEY;
-                String questExperienceRewardPath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_EXPERIENCE;
-                String questRegularItemsPath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_REGULAR_ITEMS;
-                String questItemRankPath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_RANK;
-                String questItemTypePath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_TYPE;
-                String questItemNamePath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_NAME;
-                String questItemLorePath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_LORE;
-                String questItemExtraLorePath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_EXTRA_LORE;
-                String questItemEnchantments = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ENCHANTMENTS;
-                String questItemAttributes = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ATTRIBUTES;
-                String questItemTrimPattern = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_TRIM_PATTERN;
-                String questItemTrimMaterial = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_TRIM_MATERIAL;
-
-                int moneyReward = questData.getConfig().getInt(questMoneyRewardPath);
-                int experienceReward = questData.getConfig().getInt(questExperienceRewardPath);
-                List<String> regularItemsList = questData.getConfig().getStringList(questRegularItemsPath);
-                String itemRank = questData.getConfig().getString(questItemRankPath);
-                String itemType = questData.getConfig().getString(questItemTypePath);
-                String itemName = questData.getConfig().getString(questItemNamePath);
-                String itemLore = questData.getConfig().getString(questItemLorePath);
-                String extraLore = questData.getConfig().getString(questItemExtraLorePath);
-                List<String> enchantments = questData.getConfig().getStringList(questItemEnchantments);
-                List<String> attributes = questData.getConfig().getStringList(questItemAttributes);
-                String trimPattern = questData.getConfig().getString(questItemTrimPattern);
-                String trimMaterial = questData.getConfig().getString(questItemTrimMaterial);
-
-                CustomItem customItem = new CustomItem(
-                        itemRank,
-                        itemType,
-                        itemName,
-                        itemLore,
-                        extraLore,
-                        enchantments,
-                        attributes,
-                        trimPattern,
-                        trimMaterial
-                );
-
-                QuestData data = new QuestData(
-                        questRank,
-                        questName,
-                        questLore,
-                        duration,
-                        totalDuration,
-                        moneyReward,
-                        experienceReward,
-                        listOfAllObjectives,
-                        customItem,
-                        regularItemsList,
-                        isActive,
-                        UUID.fromString(questUUIDKey),
-                        UUID.fromString(uuid)
-                );
-                questList.add(data);
-            }
+            List<String> listOfQuestUUID = new ArrayList<>(questSection.getKeys(false));
+            UUID playerUUID = UUID.fromString(uuid);
+            List<QuestData> questList = restoreQuestData(listOfQuestUUID, startingPath, UUID.fromString(uuid));
             onGoingQuest.put(playerUUID, questList);
         }
     }
@@ -188,18 +49,33 @@ public class OnGoingQuest {
     // This will update all duration
     public void createANewQuest(Player player, String message) {
         UUID playerUUID = player.getUniqueId();
-        // This just check if the player already have 9 quest
-        if (onGoingQuest.containsKey(playerUUID) && onGoingQuest.get(playerUUID).size() >= 9) return;
-        player.sendMessage(Utils.color("&6Creating quest..."));
+        // This just check if the player already have 5 quest
+        if (onGoingQuest.containsKey(playerUUID) && onGoingQuest.get(playerUUID).size() >= 5) return;
+        AdventureCraftCore.getInstance().getLogger().info("Generating a new quest for " + player.getName());
 
         HashMap<String, Double> dynamicRanks = getDynamicranks(player);
-        if (dynamicRanks == null || dynamicRanks.isEmpty()) return;
+        if (dynamicRanks == null || dynamicRanks.isEmpty()) {
+            System.out.println("RANK NOT MET");
+            return;
+        }
 
         String rank = (String) Utils.getWeightedObject(dynamicRanks);
         String mythology = AdventureCraftCore.getInstance().getQuestListChecker().getRandomMythologies();
 
-        String finalMessage = message.replace("%rank%", rank).replace("%mythology%", mythology);
-        System.out.println(finalMessage);
+        if (random.nextBoolean()) {
+            QuestData data = AdventureCraftCore.getInstance().getQuestManager().getRandomQuest(player, rank, false);
+            if (data == null) {
+                System.out.println("NO AVAILABLE QUEST");
+                return;
+            }
+            player.sendMessage(Utils.color("&6You have a new quest! " + data.getQuestName()));
+            player.sendMessage(Utils.color("&eUse the command &b/quest &eto open your personal quest board and &bclick the quest to activate it."));
+            return;
+        }
+
+        int objectiveCount = Utils.getRandom(10, 3);
+        String finalMessage = message.replace("%rank%", rank).replace("%mythology%", mythology).replace("%objective_count%", objectiveCount + "");
+        AdventureCraftCore.getInstance().getLogger().info(finalMessage);
 
         new BukkitRunnable() {
             @Override
@@ -215,7 +91,8 @@ public class OnGoingQuest {
                     questList.add(quest);
                     onGoingQuest.put(playerUUID, questList);
                 }
-                player.sendMessage(Utils.color("&bQuest created"));
+                player.sendMessage(Utils.color("&6You have a new quest! " + quest.getQuestName()));
+                player.sendMessage(Utils.color("&eUse the command &b/quest &eto open your personal quest board and &bclick the quest to activate it."));
             }
         }.runTaskAsynchronously(AdventureCraftCore.getInstance());
     }
@@ -229,10 +106,8 @@ public class OnGoingQuest {
                 // Remove the data
                 AdventureCraftCore.getInstance().getOnGoingQuestData().getConfig().set(path, null);
                 if (save) {
-                    // Save the data to all quest list
-                    Data config = AdventureCraftCore.getInstance().getAllQuestData();
                     String AllDataPath = questUUID + ".";
-                    saveQuestData(quest, config, AllDataPath, true);
+                    saveQuestData(quest, allQuestData, AllDataPath, true);
                 }
                 return true;
             }
@@ -387,40 +262,163 @@ public class OnGoingQuest {
             questData.writeString(questItemTrimMaterial, trimMaterial);
         }
     }
+    public List<QuestData> restoreQuestData(List<String> listOfQuestUUIDKeys, String startingPath, UUID uuid) {
+        List<QuestData> questList = new ArrayList<>();
+        for (String questUUIDKey : listOfQuestUUIDKeys) {
+            String questSettingPath = startingPath + questUUIDKey + ".";
 
-    private HashMap<String, Double> getDynamicranks(Player player) {
-        Long duration = Utils.getPDC(player).get(ObjectiveStrings.KEY_SESSION_DURATION, PersistentDataType.LONG);
-        if (duration == null) return null;
+            String questDifficultyPath = questSettingPath + ObjectiveStrings.QUEST_RANK;
+            String questTitlePath = questSettingPath + ObjectiveStrings.QUEST_NAME;
+            String questDescriptionPath = questSettingPath + ObjectiveStrings.QUEST_LORE;
+            String questDurationPath = questSettingPath + ObjectiveStrings.QUEST_DURATION;
+            String questTotalDurationPath = questSettingPath + ObjectiveStrings.QUEST_TOTAL_DURATION;
+            String questIsActivePath = questSettingPath + ObjectiveStrings.QUEST_ACTIVE;
 
-        HashMap<String, Double> newHashMap = new HashMap<>();
-        QuestSetting setting = AdventureCraftCore.getInstance().getQuestSetting();
+            String questRank = questData.getConfig().getString(questDifficultyPath);
+            String questName = questData.getConfig().getString(questTitlePath);
+            String questLore = questData.getConfig().getString(questDescriptionPath);
+            int duration = questData.getConfig().getInt(questDurationPath);
+            int totalDuration = questData.getConfig().getInt(questTotalDurationPath);
+            boolean isActive = questData.getConfig().getBoolean(questIsActivePath);
 
-        for (String key : ranks.keySet()) {
-            boolean addCommon = key.equalsIgnoreCase(ObjectiveStrings.COMMON) && duration > setting.getCommonDuration();
-            boolean addUnCommon = key.equalsIgnoreCase(ObjectiveStrings.UNCOMMON) && duration > setting.getUncommonDuration();
-            boolean addRare = key.equalsIgnoreCase(ObjectiveStrings.RARE) && duration > setting.getRareDuration();
-            boolean addEpic = key.equalsIgnoreCase(ObjectiveStrings.EPIC) && duration > setting.getEpicDuration();
-            boolean addLegendary = key.equalsIgnoreCase(ObjectiveStrings.LEGENDARY) && duration > setting.getLegendaryDuration();
-            boolean addMythical = key.equalsIgnoreCase(ObjectiveStrings.MYTHICAL) && duration > setting.getMythicalDuration();
-            boolean addFabled = key.equalsIgnoreCase(ObjectiveStrings.FABLED) && duration > setting.getFabledDuration();
-            boolean addGodlike = key.equalsIgnoreCase(ObjectiveStrings.GODLIKE) && duration > setting.getGodlikeDuration();
-            boolean addAscended = key.equalsIgnoreCase(ObjectiveStrings.ASCENDED) && duration > setting.getAscendedDuration();
+            HashMap<UUID, Objective> listOfAllObjectives = new HashMap<>();
 
-            newHashMap.put(key, ranks.get(key));
+            String objectivesPath = questSettingPath + "Objectives";
 
-//            if (addCommon ||
-//            addUnCommon ||
-//            addRare ||
-//            addEpic ||
-//            addLegendary ||
-//            addMythical ||
-//            addFabled ||
-//            addGodlike ||
-//            addAscended) {
-//                newHashMap.put(key, ranks.get(key));
-//            }
+            ConfigurationSection listOfObjectives = questData.getConfig().getConfigurationSection(objectivesPath);
+            if (listOfObjectives != null) {
+                for (String objectivesUUID : listOfObjectives.getKeys(false)) {
+                    String path = objectivesPath + "." + objectivesUUID + ".";
+
+                    String objectivePath = path + ObjectiveStrings.QUEST_OBJECTIVE;
+                    String titlePath = path + ObjectiveStrings.QUEST_OBJECTIVE_TITLE;
+                    String materialPath = path + ObjectiveStrings.QUEST_OBJECTIVE_MATERIAL;
+                    String entityTypePath = path + ObjectiveStrings.QUEST_OBJECTIVE_ENTITY_TYPE;
+                    String enchantmentPath = path + ObjectiveStrings.QUEST_OBJECTIVE_ENCHANTMENT;
+                    String levelPath = path + ObjectiveStrings.QUEST_OBJECTIVE_LEVEL;
+                    String countPath = path + ObjectiveStrings.QUEST_OBJECTIVE_COUNT;
+                    String totalCountPath = path + ObjectiveStrings.QUEST_OBJECTIVE_TOTAL_COUNT;
+                    String worldPath = path + ObjectiveStrings.QUEST_OBJECTIVE_OPTION_WORLD;
+                    String biomePath = path + ObjectiveStrings.QUEST_OBJECTIVE_OPTION_BIOME;
+                    String startYPath = path + ObjectiveStrings.QUEST_OBJECTIVE_OPTION_START_Y;
+                    String endYPath = path + ObjectiveStrings.QUEST_OBJECTIVE_OPTION_END_Y;
+                    String timeStartPath = path + ObjectiveStrings.QUEST_OBJECTIVE_OPTION_TIME_START;
+                    String timeEndPath = path + ObjectiveStrings.QUEST_OBJECTIVE_OPTION_TIME_END;
+
+                    String objective = questData.getConfig().getString(objectivePath);
+                    String title = questData.getConfig().getString(titlePath);
+                    String material = questData.getConfig().getString(materialPath);
+                    String entityType = questData.getConfig().getString(entityTypePath);
+                    String enchantment = questData.getConfig().getString(enchantmentPath);
+                    int level = questData.getConfig().getInt(levelPath);
+                    int count = questData.getConfig().getInt(countPath);
+                    int totalCount = questData.getConfig().getInt(totalCountPath);
+                    String world = questData.getConfig().getString(worldPath);
+                    String biome = questData.getConfig().getString(biomePath);
+                    int startY = questData.getConfig().getInt(startYPath);
+                    int endY = questData.getConfig().getInt(endYPath);
+                    int timeStart = questData.getConfig().getInt(timeStartPath);
+                    int timeEnd = questData.getConfig().getInt(timeEndPath);
+
+                    Objective obj = new Objective(
+                            objective,
+                            title,
+                            material,
+                            entityType,
+                            enchantment,
+                            level,
+                            count,
+                            totalCount,
+                            world,
+                            biome,
+                            startY,
+                            endY,
+                            timeStart,
+                            timeEnd,
+                            UUID.fromString(objectivesUUID)
+                    );
+
+                    listOfAllObjectives.put(obj.getObjectiveUUID(), obj);
+                }
+            }
+
+            String questMoneyRewardPath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_MONEY;
+            String questExperienceRewardPath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_EXPERIENCE;
+            String questRegularItemsPath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_REGULAR_ITEMS;
+            String questItemRankPath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_RANK;
+            String questItemTypePath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_TYPE;
+            String questItemNamePath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_NAME;
+            String questItemLorePath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_LORE;
+            String questItemExtraLorePath = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_EXTRA_LORE;
+            String questItemEnchantments = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ENCHANTMENTS;
+            String questItemAttributes = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_ATTRIBUTES;
+            String questItemTrimPattern = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_TRIM_PATTERN;
+            String questItemTrimMaterial = questSettingPath + ObjectiveStrings.QUEST_REWARDS_CUSTOM_ITEM_OPTIONS_TRIM_MATERIAL;
+
+            int moneyReward = questData.getConfig().getInt(questMoneyRewardPath);
+            int experienceReward = questData.getConfig().getInt(questExperienceRewardPath);
+            List<String> regularItemsList = questData.getConfig().getStringList(questRegularItemsPath);
+            String itemRank = questData.getConfig().getString(questItemRankPath);
+            String itemType = questData.getConfig().getString(questItemTypePath);
+            String itemName = questData.getConfig().getString(questItemNamePath);
+            String itemLore = questData.getConfig().getString(questItemLorePath);
+            String extraLore = questData.getConfig().getString(questItemExtraLorePath);
+            List<String> enchantments = questData.getConfig().getStringList(questItemEnchantments);
+            List<String> attributes = questData.getConfig().getStringList(questItemAttributes);
+            String trimPattern = questData.getConfig().getString(questItemTrimPattern);
+            String trimMaterial = questData.getConfig().getString(questItemTrimMaterial);
+
+            CustomItem customItem = new CustomItem(
+                    itemRank,
+                    itemType,
+                    itemName,
+                    itemLore,
+                    extraLore,
+                    enchantments,
+                    attributes,
+                    trimPattern,
+                    trimMaterial
+            );
+
+            QuestData data = new QuestData(
+                    questRank,
+                    questName,
+                    questLore,
+                    duration,
+                    totalDuration,
+                    moneyReward,
+                    experienceReward,
+                    listOfAllObjectives,
+                    customItem,
+                    regularItemsList,
+                    isActive,
+                    UUID.fromString(questUUIDKey),
+                    uuid
+            );
+            questList.add(data);
         }
-
+        return questList;
+    }
+    public void addNewQuest(Player player, QuestData data) {
+        UUID playerUUID = player.getUniqueId();
+        List<QuestData> questDataList = new ArrayList<>();
+        if (onGoingQuest.containsKey(playerUUID)) {
+            questDataList = onGoingQuest.get(playerUUID);
+            questDataList.add(data);
+            onGoingQuest.replace(playerUUID, questDataList);
+        } else {
+            questDataList.add(data);
+            onGoingQuest.put(playerUUID, questDataList);
+        }
+    }
+    private HashMap<String, Double> getDynamicranks(Player player) {
+        long duration = Utils.getSessionDuration(player);
+        if (duration <= 0) return null;
+        HashMap<String, Double> newHashMap = new HashMap<>();
+        HashMap<String, Double> ranks = AdventureCraftCore.getInstance().getQuestListChecker().getRanks();
+        for (String key : ranks.keySet()) {
+            if (Utils.isElligibleForThisQuestRank(key, duration)) newHashMap.put(key, ranks.get(key));
+        }
         return newHashMap;
     }
 }

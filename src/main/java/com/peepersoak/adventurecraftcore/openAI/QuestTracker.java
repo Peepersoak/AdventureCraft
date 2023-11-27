@@ -2,9 +2,9 @@ package com.peepersoak.adventurecraftcore.openAI;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.utils.Utils;
-import it.unimi.dsi.fastutil.Hash;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
@@ -22,59 +22,36 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.Random;
 
 public class QuestTracker implements Listener {
 
-    private final HashMap<UUID, Long> sessionDuration = new HashMap<>();
+    private final Random rand = new Random();
 
-    @EventHandler
-    public void onJoin(PlayerJoinEvent e) {
-        UUID uuid = e.getPlayer().getUniqueId();
-        long time = System.currentTimeMillis();
-        if (sessionDuration.containsKey(uuid)) {
-            sessionDuration.replace(uuid, time);
-        } else {
-            sessionDuration.put(uuid, time);
-        }
-    }
-
-    @EventHandler
-    public void onQuit(PlayerQuitEvent e) {
-        UUID uuid = e.getPlayer().getUniqueId();
-        if (sessionDuration.containsKey(uuid)) {
-            long joinTime = sessionDuration.get(uuid);
-            long currentTime = System.currentTimeMillis();
-
-            long durationTimeMillis = currentTime - joinTime;
-            long durationInSeconds = durationTimeMillis / 1000;
-
-            Long previousDuration = Utils.getPDC(e.getPlayer()).get(ObjectiveStrings.KEY_SESSION_DURATION, PersistentDataType.LONG);
-            if (previousDuration == null) previousDuration = 0L;
-            long newDuration = previousDuration + durationInSeconds;
-
-            System.out.println("TOTAL DURATION: " + newDuration);
-            Utils.getPDC(e.getPlayer()).set(ObjectiveStrings.KEY_SESSION_DURATION, PersistentDataType.LONG, newDuration);
-            sessionDuration.remove(uuid);
-        }
+    public QuestTracker() {
+        startTrackingSessionDuration();
     }
 
     // PLACING
     @EventHandler
     public void onPlace(BlockPlaceEvent e) {
         Player player = e.getPlayer();
-        int count = track(player, ObjectiveStrings.kEY_PLACING);
+        ItemStack item = e.getItemInHand();
+        if (isImportantItem(item, player)) return;
+        int count = track(player);
 
         // Check count if should trigger an event
+        boolean createQuest = shouldCreateQuest(count);
+        if (!createQuest) return;
 
         Block block = e.getBlock();
         String material = Utils.capitalizeFirstLetter(Utils.cleanString(block.getType().getKey().getKey()));
@@ -86,9 +63,11 @@ public class QuestTracker implements Listener {
     @EventHandler
     public void onBreak(BlockBreakEvent e) {
         Player player = e.getPlayer();
-        int count = track(player, ObjectiveStrings.KEY_BREAKING);
+        int count = track(player);
 
         // Check count if should trigger an event
+        boolean createQuest = shouldCreateQuest(count);
+        if (!createQuest) return;
 
         Block block = e.getBlock();
         String material = Utils.capitalizeFirstLetter(Utils.cleanString(block.getType().getKey().getKey()));
@@ -117,11 +96,10 @@ public class QuestTracker implements Listener {
             eventPlayer = player;
             if (e.getFinalDamage() >= player.getHealth()) {
                 eventTrigger = "The player died while fighting/running against " + enemyStr;
-                count = track(player, ObjectiveStrings.KEY_DYING);
             } else {
                 eventTrigger = "The player received damage from " + enemyStr;
-                count = track(player, ObjectiveStrings.KEY_GET_DAMAGE);
             }
+            count = track(player);
         }
 
         // This is sending damage
@@ -130,12 +108,17 @@ public class QuestTracker implements Listener {
             eventPlayer = player;
             if (e.getFinalDamage() >= livingEntity.getHealth()) {
                 eventTrigger = "The player killed " + enemyStr + ". ";
-                count = track(player, ObjectiveStrings.KEY_KILLING);
             } else {
                 eventTrigger = "The player attacked " + enemyStr + ". ";
-                count = track(player, ObjectiveStrings.KEY_SEND_DAMAGE);
             }
+            count = track(player);
         }
+
+        boolean createQuest = shouldCreateQuest(count) ||
+                shouldCreateQuest(count) ||
+                shouldCreateQuest(count) ||
+                shouldCreateQuest(count);
+        if (!createQuest) return;
 
         if (eventTrigger != null) {
             createPrompt(eventPlayer, eventTrigger);
@@ -147,8 +130,10 @@ public class QuestTracker implements Listener {
         ItemStack item = e.getItem();
         Player player = e.getPlayer();
 
-        int count = track(player, ObjectiveStrings.KEY_CONSUMING);
+        int count = track(player);
         // Check count if should trigger an event
+        boolean createQuest = shouldCreateQuest(count);
+        if (!createQuest) return;
 
         String eventTrigger = "The player has consumed a/an " + Utils.capitalizeFirstLetter(Utils.cleanString(item.getType().getKey().getKey()));
         createPrompt(player, eventTrigger);
@@ -158,8 +143,10 @@ public class QuestTracker implements Listener {
     public void onCraft(CraftItemEvent e) {
         ItemStack item = e.getRecipe().getResult();
         if (!(e.getWhoClicked() instanceof Player player)) return;
-        int count = track(player, ObjectiveStrings.KEY_CRAFTING);
+        int count = track(player);
         // Check count if should trigger an event
+        boolean createQuest = shouldCreateQuest(count);
+        if (!createQuest) return;
 
         String material = Utils.capitalizeFirstLetter(Utils.cleanString(item.getType().getKey().getKey()));
         String eventTrigger = "The player craft a/an " + material + ". ";
@@ -170,8 +157,10 @@ public class QuestTracker implements Listener {
     public void onSummmon(EntityBreedEvent e) {
         LivingEntity entity = e.getEntity();
         if (!(e.getBreeder() instanceof Player player)) return;
-        int count = track(player, ObjectiveStrings.KEY_SUMMONING);
+        int count = track(player);
         // Check count if should trigger an event
+        boolean createQuest = shouldCreateQuest(count);
+        if (!createQuest) return;
 
         String entityStr = Utils.capitalizeFirstLetter(Utils.cleanString(entity.getType().getKey().getKey()));
         String eventTrigger = "The player breeds " + entityStr + ". ";
@@ -181,16 +170,17 @@ public class QuestTracker implements Listener {
     @EventHandler
     public void onEnchant(EnchantItemEvent e) {
         Player player = e.getEnchanter();
-        int count = track(player, ObjectiveStrings.KEY_ENCHANTING);
+        int count = track(player);
         ItemStack item = e.getItem();
         String material = Utils.capitalizeFirstLetter(Utils.cleanString(item.getType().getKey().getKey()));
         // Check count if should trigger an event
+        boolean createQuest = shouldCreateQuest(count);
+        if (!createQuest) return;
+
         String eventTrigger = "The player is currently enchanting a " + material + ". ";
         createPrompt(player, eventTrigger);
     }
     // Anvil
-
-
     @EventHandler
     public void onAnvilUse(InventoryClickEvent e) {
         Inventory inventory = e.getClickedInventory();
@@ -201,9 +191,6 @@ public class QuestTracker implements Listener {
                 e.getClick() != ClickType.RIGHT &&
                 e.getClick() != ClickType.SHIFT_RIGHT) return;
 
-        System.out.println(e.getClick());
-        System.out.println(inventory.getType());
-        System.out.println(e.getInventory().getSize());
         String inventoryName = e.getView().getTitle();
 
         // First Item
@@ -250,70 +237,64 @@ public class QuestTracker implements Listener {
 
         if (inventory.getType() == InventoryType.ANVIL) {
             if (e.getSlot() != 2 || !hasThirdItem) return;
-            count = track(player, ObjectiveStrings.KEY_ANVIL);
             // Check count if should trigger an event
             eventTrigger = "The player used an anvil to combine " + firstIngredient + " and " + secondIngredient + ". ";
-
         } else if (inventory.getType() == InventoryType.SMITHING) {
             if (e.getSlot() != 3 || !hasFourthItem) return;
-            count = track(player, ObjectiveStrings.KEY_SMITHING);
             // Check count if should trigger an event
             eventTrigger = "The player used a smithing table and " + firstIngredient + " to upgrade " + secondIngredient + " using " + thirdIngredient + " to create " + fourIngredient + ". ";
-
         } else if (inventory.getType() == InventoryType.CARTOGRAPHY) {
             if (e.getSlot() != 2 || !hasThirdItem) return;
-            count = track(player, ObjectiveStrings.KEY_CARTOGRAPHY);
             // Check count if should trigger an event
             eventTrigger = "The player used a cartography. ";
-
         } else if (inventory.getType() == InventoryType.STONECUTTER) {
             if (e.getSlot() != 1 || !hasSecondItem) return;
-            count = track(player, ObjectiveStrings.KEY_STONECUTTER);
             // Check count if should trigger an event
             eventTrigger = "The player used a stone cutter to cut a " + firstIngredient + " into " + secondIngredient + ". ";
-
         } else if (inventory.getType() == InventoryType.GRINDSTONE) {
             if (e.getSlot() != 2 || !hasThirdItem) return;
-            count = track(player, ObjectiveStrings.KEY_GRINDSTONE);
             // Check count if should trigger an event
             eventTrigger = "The player used a grindstone to remove an enchantment from " + thirdIngredient + ". ";
-
         } else if (inventory.getType() == InventoryType.LOOM) {
             if (e.getSlot() != 3 || !hasFourthItem) return;
-            count = track(player, ObjectiveStrings.KEY_LOOM);
             // Check count if should trigger an event
             eventTrigger = "The player used a loom to create a " + fourIngredient + ". ";
-
         } else if (inventory.getType() == InventoryType.FURNACE) {
             if (e.getSlot() != 2 || !hasThirdItem) return;
-            count = track(player, ObjectiveStrings.KEY_FURNACE);
             // Check count if should trigger an event
             eventTrigger = "The player used a furnace to cook " + thirdIngredient + ". ";
-
         } else if (inventory.getType() == InventoryType.SMOKER) {
             if (e.getSlot() != 2 || !hasThirdItem) return;
-            count = track(player, ObjectiveStrings.KEY_SMOKER);
             // Check count if should trigger an event
             eventTrigger = "The player used a smoker to cook " + thirdIngredient + ". ";
-
         } else if (inventory.getType() == InventoryType.BLAST_FURNACE) {
             if (e.getSlot() != 2 || !hasThirdItem) return;
-            count = track(player, ObjectiveStrings.KEY_BLASTFURNACE);
             // Check count if should trigger an event
             eventTrigger = "The player used a blast furnace to smelt " + thirdIngredient + ". ";
-
         } else if (inventory.getType() == InventoryType.MERCHANT) {
             if (e.getSlot() != 2 || !hasThirdItem) return;
-            count = track(player, ObjectiveStrings.KEY_TRADING);
             // Check count if should trigger an event
             eventTrigger = "The player traded with a " + inventoryName +  " villager for " + thirdIngredient + ". ";
+        } else {
+            return;
         }
 
-        System.out.println("HAS PROMPT: " + eventTrigger);
+        count = track(player);
+        boolean createQuest = shouldCreateQuest(count);
+        if (!createQuest) return;
 
-        if (!eventTrigger.isEmpty()) {
-            System.out.println(count);
-            createPrompt(player, eventTrigger);
+        System.out.println(count);
+        createPrompt(player, eventTrigger);
+    }
+
+    @EventHandler
+    public void onInteract(PlayerInteractEvent e) {
+        Player player = e.getPlayer();
+        ItemStack item = e.getItem();
+        if (e.getClickedBlock() != null && item != null) {
+            if (isImportantItem(item, player)) {
+                e.setCancelled(true);
+            }
         }
     }
 
@@ -331,13 +312,7 @@ public class QuestTracker implements Listener {
         }
 
 
-        long playTime = 0;
-        if (Utils.getPDC(player).has(ObjectiveStrings.KEY_SESSION_DURATION, PersistentDataType.LONG)) {
-            Long duration = Utils.getPDC(player).get(ObjectiveStrings.KEY_SESSION_DURATION, PersistentDataType.LONG);
-            if (duration != null) {
-                playTime = duration;
-            }
-        }
+        long playTime = Utils.getSessionDuration(player);
         long daysTime = playTime / (24 * 3600);;
         long hoursTime = (playTime % (24 * 3600)) / 3600;;
         long minutesTime = (playTime % 3600) / 60;;
@@ -363,7 +338,7 @@ public class QuestTracker implements Listener {
                 .append(" hour's, ")
                 .append(minutesTime)
                 .append(" minute's, ")
-                .append(" and ")
+                .append("and ")
                 .append(secondsTime)
                 .append(" second's. ");
 
@@ -374,6 +349,13 @@ public class QuestTracker implements Listener {
         prompt.append("They are currently in ").append(worldType).append(" ");
         // The Biome
         prompt.append("in the biome of ").append(Utils.capitalizeFirstLetter(Utils.cleanString(biome))).append(". ");
+
+        Location location = player.getLocation();
+        Block block = location.add(0, -1, 0).getBlock();
+        Material blockStandinMaterial = block.getType();
+        String materialString = Utils.capitalizeFirstLetter(Utils.color(blockStandinMaterial.getKey().getKey()));
+        prompt.append("They are currently standing on top of ").append(materialString).append(". ");
+
         if (isStorming) {
             prompt.append("It is currently raining hard right now. ");
         }
@@ -437,19 +419,55 @@ public class QuestTracker implements Listener {
         }
 
         prompt.append("They currently carrying ").append(importantItems.toString().trim()).append(" in their inventory. ");
-        prompt.append("Base on this information, create a %rank% rank quest and incorporate the %mythology% in the quest to infuse it with rich and intricate lore");
+
+
+
+        prompt.append("Base on this information, create a %rank% rank quest and incorporate the %mythology% in the quest to infuse it with rich and intricate lore. The quest should have %objective_count% objectives.");
 
         AdventureCraftCore.getInstance().getOnGoingQuest().createANewQuest(player, prompt.toString().trim());
     }
-    private int track(Player player, NamespacedKey key) {
+    private int track(Player player) {
         PersistentDataContainer data = player.getPersistentDataContainer();
-        Integer count = data.get(key, PersistentDataType.INTEGER);
+        Integer count = data.get(ObjectiveStrings.KEY_GENERAL_FREQUENCY, PersistentDataType.INTEGER);
         if (count == null) {
             count = 0;
         }
         count++;
-        System.out.println(Utils.color("&b" + count + " " + key.getKey()));
-        data.set(key, PersistentDataType.INTEGER, count);
+        System.out.println(Utils.color("&b" + count + " " + ObjectiveStrings.KEY_GENERAL_FREQUENCY.getKey()));
+        data.set(ObjectiveStrings.KEY_GENERAL_FREQUENCY, PersistentDataType.INTEGER, count);
         return count;
+    }
+    private boolean shouldCreateQuest(int count) {
+        int frequency = AdventureCraftCore.getInstance().getQuestSetting().getQuestFrequency();
+        if (count % frequency != 0) return false;
+        return rand.nextBoolean();
+    }
+
+    private boolean isImportantItem(ItemStack item, Player player) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return false;
+        PersistentDataContainer pdc = meta.getPersistentDataContainer();
+        boolean isImportant = pdc.has(ObjectiveStrings.PDC_CUSTOM_ITEM, PersistentDataType.STRING);
+
+        if (isImportant) {
+            player.sendMessage(Utils.color("&cYou can do that to this item!"));
+        }
+
+        return isImportant;
+    }
+
+    private void startTrackingSessionDuration() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    Long duration = Utils.getPDC(player).get(ObjectiveStrings.KEY_SESSION_DURATION, PersistentDataType.LONG);
+                    if (duration == null) duration = 0L;
+                    duration += 5;
+                    System.out.println("NEW DURATION = " + duration);
+                    Utils.getPDC(player).set(ObjectiveStrings.KEY_SESSION_DURATION, PersistentDataType.LONG, duration);
+                }
+            }
+        }.runTaskTimer(AdventureCraftCore.getInstance(), 0, 100);
     }
 }

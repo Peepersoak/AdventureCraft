@@ -7,13 +7,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.utils.EnchantmentKeys;
 import com.peepersoak.adventurecraftcore.utils.Utils;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.enchantments.EnchantmentWrapper;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -21,15 +19,13 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class OpenAI {
     private final EnchantmentKeys enchantmentKeys = new EnchantmentKeys();
     private final String OPEN_AI_KEY;
     private final String OPEN_AI_MODEL;
+    private final Random random = new Random();
 
     public OpenAI() {
         OPEN_AI_KEY = AdventureCraftCore.getInstance().getConfig().getString("OPEN_AI_KEY");
@@ -63,9 +59,6 @@ public class OpenAI {
 
             messages.add(system);
             messages.add(user);
-
-//            String gpt3 = "gpt-3.5-turbo-1106";
-//            String gpt4 = "gpt-4-1106-preview";
 
             ObjectNode format = objectMapper.createObjectNode();
             format.put("type", "json_object");
@@ -119,10 +112,16 @@ public class OpenAI {
     }
 
     public QuestData createQuest(String message, UUID playerUUID) {
+        // This that I must generate my self
+        // Duration
+        // All objectives
+        //
+
+
         String instruction =
             """
             In the vast and ever-changing world of Minecraft, you play the crucial role of the Game Master, overseeing the game and responsible for creating captivating quests and rewards that significantly impact players' adventures in the pixelated realm. These quests and items are categorized into five distinct ranks: Common, Uncommon, Rare, Epic, Legendary, Mythical, Fabled, Godlike, and Ascended. It's essential to align each quest with players' ongoing activities, seamlessly integrating with their current pursuits. Higher-difficulty quests come with more multiple challenging objectives and requirements, often in the range of thousands but with better rewards.
-                
+            
             When adding color, use the Spigot API color code (e.g., &c for red, &b for aqua etc.).
                         
             Here are the list of objectives that you can use:
@@ -153,7 +152,7 @@ public class OpenAI {
                         "EntityType": "Type of the entity if the objective is Kill",
                         "Enchantment": "Type of enchantment if the objective is Enchant",
                         "Level" : "Enchantment level required if the objective is Enchant",
-                        "Count": "Target amount (e.g Blocks to break, crops to plant, items to enchant) in numbers, higher rank must have hundreds or thousands of requirements",
+                        "Count": "Target amount (e.g Blocks to break, crops to plant, items to enchant) in numbers",
                         "Optional": {
                             "World": "World type to use, choose one of the following (OVERWORLD, THE_NETHER, THE_END)",
                             "Biome": "A valid biome found in Spigot API (e.g., Dessert) must be present in the given world type",
@@ -209,6 +208,7 @@ public class OpenAI {
             """;
         String dataObject = generate(message, instruction);
         System.out.println(dataObject);
+
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode object = mapper.readTree(dataObject);
@@ -249,12 +249,11 @@ public class OpenAI {
                 return null;
             }
             duration = object.get(ObjectiveStrings.QUEST_DURATION).asInt();
+            // This will make sure that every task has a minimum duration of 10 minutes
             if (duration <= 600) {
                 duration = 600;
-            } else if (duration > 86400) {
-                duration = 86400;
             }
-            totalDuration = duration;
+
 
             // Get the objectives
             if (!object.has(ObjectiveStrings.QUEST_OBJECTIVES) || !object.get(ObjectiveStrings.QUEST_OBJECTIVES).isArray()) {
@@ -263,6 +262,8 @@ public class OpenAI {
             }
 
             ArrayNode listOfObjectives = (ArrayNode) object.get(ObjectiveStrings.QUEST_OBJECTIVES);
+
+            int minimumCalculatedDuration = 0;
             for (int i = 0; i < listOfObjectives.size() ; i ++) {
                 // This is the objective json object
                 JsonNode objective = listOfObjectives.get(i);
@@ -274,7 +275,6 @@ public class OpenAI {
                 String entityType = null;
                 String enchantment = null;
                 int level = -1;
-                int count = -1;
                 int totalCount = -1;
                 String world = null;
                 String biome = null;
@@ -290,35 +290,46 @@ public class OpenAI {
                 if (!objective.has(ObjectiveStrings.QUEST_OBJECTIVE_TITLE)) continue;
                 title = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_TITLE).asText();
 
+                boolean isBreak = type.equalsIgnoreCase(ObjectiveStrings.TYPE_BREAK);
+                boolean isPlace = type.equalsIgnoreCase(ObjectiveStrings.TYPE_PLACE);
+                boolean isHarvest = type.equalsIgnoreCase(ObjectiveStrings.TYPE_HARVEST);
+                boolean isPlant = type.equalsIgnoreCase(ObjectiveStrings.TYPE_PLANT);
+                boolean isCraft = type.equalsIgnoreCase(ObjectiveStrings.TYPE_CRAFT);
+                boolean isEnchant = type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT);
+                boolean isFishing = type.equalsIgnoreCase(ObjectiveStrings.TYPE_FISHING);
+                boolean isWalk = type.equalsIgnoreCase(ObjectiveStrings.TYPE_WALK);
+                boolean isFly = type.equalsIgnoreCase(ObjectiveStrings.TYPE_FLY);
+                boolean isKill = type.equalsIgnoreCase(ObjectiveStrings.TYPE_KILL);
 
-                if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_BREAK) ||
-                type.equalsIgnoreCase(ObjectiveStrings.TYPE_PLACE) ||
-                type.equalsIgnoreCase(ObjectiveStrings.TYPE_HARVEST) ||
-                type.equalsIgnoreCase(ObjectiveStrings.TYPE_PLANT) ||
-                type.equalsIgnoreCase(ObjectiveStrings.TYPE_CRAFT) ||
-                type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT) ||
-                type.equalsIgnoreCase(ObjectiveStrings.TYPE_FISHING)) {
+                if (isBreak ||
+                isPlace ||
+                isHarvest ||
+                isPlant ||
+                isCraft ||
+                isEnchant ||
+                isFishing) {
                     if (!objective.has(ObjectiveStrings.QUEST_OBJECTIVE_MATERIAL)) continue;
                     String givenMaterial = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_MATERIAL).asText();
                     if (givenMaterial == null) continue;
                     String convert = Utils.cleanString(givenMaterial).toUpperCase();
                     if (!Utils.isValidMaterial(convert)) continue;
-                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_CRAFT)) {
+                    if (isCraft) {
                         if (!Utils.isCraftable(convert)) continue;
                     }
-                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_HARVEST)) {
+                    if (isHarvest) {
                         if (!AdventureCraftCore.getInstance().getQuestListChecker().isHarvestable(convert)) continue;
                     }
-                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_BREAK) || type.equalsIgnoreCase(ObjectiveStrings.TYPE_PLACE)) {
+                    if (isBreak || isPlace) {
                         if (AdventureCraftCore.getInstance().getQuestListChecker().isUnbreakable(convert)) continue;
+                        if (!Utils.isValidBreakableBlock(convert)) continue;;
                     }
-                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_FISHING)) {
+                    if (isFishing) {
                         if (!AdventureCraftCore.getInstance().getQuestListChecker().getFishable(convert)) continue;
                     }
                     material = convert;
                 }
 
-                if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_KILL)) {
+                if (isKill) {
                     if (!objective.has(ObjectiveStrings.QUEST_OBJECTIVE_ENTITY_TYPE)) continue;
                     String givenEntityType = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_ENTITY_TYPE).asText();
                     material = AdventureCraftCore.getInstance().getQuestListChecker().getRandomWeapon().getKey().getKey();
@@ -329,7 +340,7 @@ public class OpenAI {
                     entityType = convert;
                 }
 
-                if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
+                if (isEnchant) {
                     if (!objective.has(ObjectiveStrings.QUEST_OBJECTIVE_ENCHANTMENT) || !objective.has(ObjectiveStrings.QUEST_OBJECTIVE_LEVEL)) continue;
                     String rawEnchantment = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_ENCHANTMENT).asText();
                     enchantment = enchantmentKeys.convertToMinecraftKey(Utils.cleanString(rawEnchantment));
@@ -345,63 +356,18 @@ public class OpenAI {
                 }
 
                 if (!objective.has(ObjectiveStrings.QUEST_OBJECTIVE_COUNT)) continue;
-                count = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_COUNT).asInt();
-                totalCount = count;
+                totalCount = objective.get(ObjectiveStrings.QUEST_OBJECTIVE_COUNT).asInt();
 
-                if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_FLY) || type.equalsIgnoreCase(ObjectiveStrings.TYPE_WALK)) {
-                    // Seconds to walk and run will get the minimum number between the given goal and the duration
-                    // Basically the duration to run will either be the given but if it exceeds the duration it will be the duration
-                    // Then it will add another 300 seconds which is 5 minutes. To make sure there's at least 5 minutes difference
-                    count = Math.min(count, duration) + 300;
+                int[] minmax = Utils.getMinMaxGoal(Utils.cleanString(questRank), type);
+                int min = minmax[0];
+                int max = minmax[1];
+
+                if (totalCount < min || totalCount > max) {
+                    totalCount = random.nextInt(max - min + 1) + min;
                 }
 
-                if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.COMMON)) {
-                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
-                        count = Math.max(Math.min(count, 5), 2);
-                    }
-                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.UNCOMMON)) {
-                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
-                        count = Math.max(Math.min(count, 5), 3);
-                    }
-                    duration = Math.max(duration, 900);
-                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.RARE)) {
-                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
-                        count = Math.max(Math.min(count, 8), 5);
-                    }
-                    duration = Math.max(duration, 1800);
-                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.EPIC)) {
-                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
-                        count = Math.max(Math.min(count, 12), 8);
-                    }
-                    duration = Math.max(duration, 3600);
-                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.LEGENDARY)) {
-                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
-                        count = Math.max(Math.min(count, 15), 10);
-                    }
-                    duration = Math.max(duration, 7200);
-                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.MYTHICAL)) {
-                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
-                        count = Math.max(Math.min(count, 18), 12);
-                    }
-                    duration = Math.max(duration, 10800);
-                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.FABLED)) {
-                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
-                        count = Math.max(Math.min(count, 20), 15);
-                    }
-                    duration = Math.max(duration, 14400);
-                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.GODLIKE)) {
-                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
-                        count = Math.max(Math.min(count, 30), 20);
-                    }
-                    duration = Math.max(duration, 21600);
-                } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.ASCENDED)) {
-                    if (type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
-                        count = Math.max(Math.min(count, 50), 30);
-                    }
-                    duration = Math.max(duration, 28800);
-                } else {
-                    count = Math.max(count, 5);
-                }
+                int durationForThisTask = Utils.getMinDuration(type, totalCount);
+                minimumCalculatedDuration += durationForThisTask;
 
                 System.out.println(objective);
                 System.out.println("Checking Options");
@@ -412,7 +378,6 @@ public class OpenAI {
 
                     System.out.println("Has Options");
                     boolean hasWorldOptions = options.has(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_WORLD);
-                    boolean isKill = type.equals("Kill");
 
                     if (hasWorldOptions && !isKill) {
                         String givenWorld = options.get(ObjectiveStrings.QUEST_OBJECTIVE_OPTION_WORLD).asText();
@@ -463,7 +428,7 @@ public class OpenAI {
                         entityType,
                         enchantment,
                         level,
-                        count,
+                        0,
                         totalCount,
                         world,
                         biome,
@@ -475,6 +440,12 @@ public class OpenAI {
                 );
                 allObjectives.put(objectiveUUID, finalObjective);
             }
+            // This will check if the calculated minimum duration is greater than the one provided
+            // and forcefully change it to the minimum duration.
+            if (duration <= minimumCalculatedDuration) {
+                duration = minimumCalculatedDuration;
+            }
+            totalDuration = duration;
 
             // No registered objectives
             if (allObjectives.isEmpty()) {
@@ -628,8 +599,8 @@ public class OpenAI {
                     questUUID,
                     playerUUID);
         } catch (Exception e) {
-            System.out.println("Not a valid json");
-            e.printStackTrace();
+            System.out.println("Not a valid json or the server was not able to get any information from the ai");
+//            e.printStackTrace();
         }
         return null;
     }

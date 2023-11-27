@@ -4,6 +4,8 @@ import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.combat.levelmobs.MobFactory;
 import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.variation.AggresiveVirusZombie;
 import com.peepersoak.adventurecraftcore.combat.levelmobs.zombie.variation.BoomerZombie;
+import com.peepersoak.adventurecraftcore.openAI.ObjectiveStrings;
+import com.peepersoak.adventurecraftcore.openAI.QuestSetting;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.protection.ApplicableRegionSet;
@@ -22,8 +24,6 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.trim.ArmorTrim;
-import org.bukkit.inventory.meta.trim.TrimMaterial;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.io.BukkitObjectInputStream;
@@ -473,5 +473,295 @@ public class Utils {
         Random rand = new Random();
         int random = rand.nextInt(total);
         return list.get(random);
+    }
+
+    public static boolean isElligibleForThisQuestRank(String questRank, long duration) {
+        QuestSetting setting = AdventureCraftCore.getInstance().getQuestSetting();
+
+        boolean addCommon = questRank.equalsIgnoreCase(ObjectiveStrings.COMMON) && duration > setting.getCommonDuration();
+        boolean addUnCommon = questRank.equalsIgnoreCase(ObjectiveStrings.UNCOMMON) && duration > setting.getUncommonDuration();
+        boolean addRare = questRank.equalsIgnoreCase(ObjectiveStrings.RARE) && duration > setting.getRareDuration();
+        boolean addEpic = questRank.equalsIgnoreCase(ObjectiveStrings.EPIC) && duration > setting.getEpicDuration();
+        boolean addLegendary = questRank.equalsIgnoreCase(ObjectiveStrings.LEGENDARY) && duration > setting.getLegendaryDuration();
+        boolean addMythical = questRank.equalsIgnoreCase(ObjectiveStrings.MYTHICAL) && duration > setting.getMythicalDuration();
+        boolean addFabled = questRank.equalsIgnoreCase(ObjectiveStrings.FABLED) && duration > setting.getFabledDuration();
+        boolean addGodlike = questRank.equalsIgnoreCase(ObjectiveStrings.GODLIKE) && duration > setting.getGodlikeDuration();
+        boolean addAscended = questRank.equalsIgnoreCase(ObjectiveStrings.ASCENDED) && duration > setting.getAscendedDuration();
+
+        return addCommon ||
+                addUnCommon ||
+                addRare ||
+                addEpic ||
+                addLegendary ||
+                addMythical ||
+                addFabled ||
+                addGodlike ||
+                addAscended;
+    }
+
+    public static Long getSessionDuration(Player player) {
+        Long totalSeconds = getPDC(player).get(ObjectiveStrings.KEY_SESSION_DURATION, PersistentDataType.LONG);
+        if (totalSeconds == null) totalSeconds = 0L;
+        return totalSeconds;
+    }
+
+    public static int[] getMinMaxGoal(String questRank, String type) {
+        int min = 1;
+        int max = 2;
+
+        boolean isBreak = type.equalsIgnoreCase(ObjectiveStrings.TYPE_BREAK);
+        boolean isPlace = type.equalsIgnoreCase(ObjectiveStrings.TYPE_PLACE);
+        boolean isHarvest = type.equalsIgnoreCase(ObjectiveStrings.TYPE_HARVEST);
+        boolean isPlant = type.equalsIgnoreCase(ObjectiveStrings.TYPE_PLANT);
+        boolean isCraft = type.equalsIgnoreCase(ObjectiveStrings.TYPE_CRAFT);
+        boolean isEnchant = type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT);
+        boolean isFishing = type.equalsIgnoreCase(ObjectiveStrings.TYPE_FISHING);
+        boolean isWalk = type.equalsIgnoreCase(ObjectiveStrings.TYPE_WALK);
+        boolean isFly = type.equalsIgnoreCase(ObjectiveStrings.TYPE_FLY);
+        boolean isKill = type.equalsIgnoreCase(ObjectiveStrings.TYPE_KILL);
+
+        if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.COMMON)) {
+            if (isEnchant) {
+                max = 3;
+            } else if (isWalk || isFly) {
+                min = 120;
+                max = 300;
+            } else if (isBreak || isPlace) {
+                min = 64;
+                max = 500;
+            } else if (isHarvest || isPlant) {
+                min = 64;
+                max = 128;
+            } else if (isCraft) {
+                min = 16;
+                max = 64;
+            } else if (isFishing) {
+                min = 16;
+                max = 64;
+            } else if (isKill) {
+                min = 100;
+                max = 200;
+            }
+        } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.UNCOMMON)) {
+            if (isEnchant) {
+                min = 2;
+                max = 5;
+            } else if (isWalk || isFly) {
+                min = 300;
+                max = 700;
+            } else if (isBreak || isPlace) {
+                min = 500;
+                max = 800;
+            } else if (isHarvest) {
+                min = 120;
+                max = 300;
+            } else if (isCraft) {
+                min = 30;
+                max = 64;
+            } else if (isFishing) {
+                min = 30;
+                max = 64;
+            } else if (isKill) {
+                min = 100;
+                max = 200;
+            }
+        } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.RARE)) {
+            if (isEnchant) {
+                min = 5;
+                max = 8;
+            } else if (isWalk || isFly) {
+                min = 700;
+                max = 1000;
+            } else if (isBreak || isPlace) {
+                min = 800;
+                max = 1500;
+            } else if (isHarvest) {
+                min = 300;
+                max = 500;
+            } else if (isCraft) {
+                min = 64;
+                max = 120;
+            } else if (isFishing) {
+                min = 64;
+                max = 100;
+            } else if (isKill) {
+                min = 100;
+                max = 300;
+            }
+        } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.EPIC)) {
+            if (isEnchant) {
+                min = 8;
+                max = 12;
+            } else if (isWalk || isFly) {
+                min = 1000;
+                max = 2000;
+            } else if (isBreak || isPlace) {
+                min = 1500;
+                max = 2500;
+            } else if (isHarvest) {
+                min = 500;
+                max = 800;
+            } else if (isCraft) {
+                min = 120;
+                max = 300;
+            } else if (isFishing) {
+                min = 100;
+                max = 150;
+            } else if (isKill) {
+                min = 300;
+                max = 500;
+            }
+        } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.LEGENDARY)) {
+            if (isEnchant) {
+                min = 800;
+                max = 1200;
+            } else if (isWalk || isFly) {
+                min = 2000;
+                max = 3000;
+            } else if (isBreak || isPlace) {
+                min = 2500;
+                max = 3000;
+            } else if (isHarvest) {
+                min = 800;
+                max = 1500;
+            } else if (isCraft) {
+                min = 300;
+                max = 500;
+            } else if (isFishing) {
+                min = 150;
+                max = 200;
+            } else if (isKill) {
+                min = 300;
+                max = 500;
+            }
+        } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.MYTHICAL)) {
+            if (isEnchant) {
+                min = 20;
+                max = 30;
+            } else if (isWalk || isFly) {
+                min = 3000;
+                max = 4000;
+            } else if (isBreak || isPlace) {
+                min = 3000;
+                max = 3500;
+            } else if (isHarvest) {
+                min = 1000;
+                max = 1500;
+            } else if (isCraft) {
+                min = 500;
+                max = 800;
+            } else if (isFishing) {
+                min = 200;
+                max = 350;
+            } else if (isKill) {
+                min = 500;
+                max = 800;
+            }
+        } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.FABLED)) {
+            if (isEnchant) {
+                min = 30;
+                max = 50;
+            } else if (isWalk || isFly) {
+                min = 4000;
+                max = 5000;
+            } else if (isBreak || isPlace) {
+                min = 3500;
+                max = 4000;
+            } else if (isHarvest) {
+                min = 1000;
+                max = 1500;
+            } else if (isCraft) {
+                min = 800;
+                max = 1000;
+            } else if (isFishing) {
+                min = 350;
+                max = 500;
+            } else if (isKill) {
+                min = 800;
+                max = 1000;
+            }
+        } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.GODLIKE)) {
+            if (isEnchant) {
+                min = 50;
+                max = 80;
+            } else if (isWalk || isFly) {
+                min = 5000;
+                max = 6000;
+            } else if (isBreak || isPlace) {
+                min = 4000;
+                max = 4500;
+            } else if (isHarvest) {
+                min = 1500;
+                max = 2000;
+            } else if (isCraft) {
+                min = 1000;
+                max = 1500;
+            } else if (isFishing) {
+                min = 500;
+                max = 800;
+            } else if (isKill) {
+                min = 1000;
+                max = 1500;
+            }
+        } else if (Utils.cleanString(questRank).equalsIgnoreCase(ObjectiveStrings.ASCENDED)) {
+            if (isEnchant) {
+                min = 50;
+                max = 100;
+            } else if (isWalk || isFly) {
+                min = 6000;
+                max = 7200;
+            } else if (isBreak || isPlace) {
+                min = 4500;
+                max = 5000;
+            } else if (isHarvest) {
+                min = 2000;
+                max = 3000;
+            } else if (isCraft) {
+                min = 1500;
+                max = 2000;
+            } else if (isFishing) {
+                min = 800;
+                max = 1000;
+            } else if (isKill) {
+                min = 1500;
+                max = 3000;
+            }
+        } else {
+            min = 300;
+            max = 3000;
+        }
+
+        return new int[]{min, max};
+    }
+    public static int getMinDuration(String type, int goal) {
+        int minDuration;
+
+        boolean isBreak = type.equalsIgnoreCase(ObjectiveStrings.TYPE_BREAK);
+        boolean isPlace = type.equalsIgnoreCase(ObjectiveStrings.TYPE_PLACE);
+        boolean isHarvest = type.equalsIgnoreCase(ObjectiveStrings.TYPE_HARVEST);
+        boolean isPlant = type.equalsIgnoreCase(ObjectiveStrings.TYPE_PLANT);
+        boolean isCraft = type.equalsIgnoreCase(ObjectiveStrings.TYPE_CRAFT);
+        boolean isEnchant = type.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT);
+        boolean isFishing = type.equalsIgnoreCase(ObjectiveStrings.TYPE_FISHING);
+        boolean isWalk = type.equalsIgnoreCase(ObjectiveStrings.TYPE_WALK);
+        boolean isFly = type.equalsIgnoreCase(ObjectiveStrings.TYPE_FLY);
+        boolean isKill = type.equalsIgnoreCase(ObjectiveStrings.TYPE_KILL);
+
+        // Will not change base on rank
+        if (isBreak) {
+            // Min duration will be 3 seconds per block, 3 seconds is the time it will take
+            // To mine an obsidian block using netherite pickaxe with Efficiency 5 enchantment
+            minDuration = goal * 3;
+            return minDuration;
+        } else if (isEnchant) {
+            // Min duration is 60 seconds per enchantment.
+            minDuration = goal * 60;
+            return minDuration;
+        } else {
+            // For other task, it will just add additional 10 minutes, making sure that
+            // The that each objective will not go below 10 minutes
+            minDuration = goal + 600;
+            return  minDuration;
+        }
     }
 }

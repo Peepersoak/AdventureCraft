@@ -16,37 +16,32 @@ public class WorldEvents implements Listener {
 
     @EventHandler
     public void onPortalEntry(PlayerPortalEvent e) {
-        int dayPassed = Utils.getDayPassed();
+        Player player = e.getPlayer();
+        if (player.isOp()) return;
 
-        boolean shouldEnter = true;
-        int remainingDay = 0;
-
+        long duration = Utils.getSessionDuration(player);
+        boolean allow = true;
         if (e.getCause() == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL) {
-            if (dayPassed < 1000) {
-                remainingDay = 1000 - dayPassed;
-                shouldEnter = false;
+            // Will only be allowed to enter nether if they played for more than 24 hours
+            if (duration <= 86400) {
+                allow = false;
+            }
+        } else if (e.getCause() == PlayerTeleportEvent.TeleportCause.END_PORTAL) {
+            // Will only be allowed to enter nether if they played for more than 48 hours
+            if (duration <= 172800) {
+                allow = false;
             }
         }
 
-        if (e.getCause() == PlayerTeleportEvent.TeleportCause.END_PORTAL) {
-            if (dayPassed < 2000) {
-                remainingDay = 2000 - dayPassed;
-                shouldEnter = false;
-            }
-        }
-
-        if (e.getPlayer().isOp()) shouldEnter = true;
-
-        if (!shouldEnter) {
-            Player player = e.getPlayer();
-
+        if (!allow) {
             if (cooldown.containsKey(player.getUniqueId())) {
                 if (Utils.getRemainingCooldown(cooldown.get(player.getUniqueId())) <= 0) {
-                    Utils.sendSyncMessage(player, "&cCan't Enter!! &b" + remainingDay + " &cMinecraft days left before you can enter!");
+                    Utils.sendSyncMessage(player, "&cYou have not played enough to enter this portal!");
                     cooldown.put(player.getUniqueId(), System.currentTimeMillis() + (1000 * 5));
                 }
             } else {
                 cooldown.put(player.getUniqueId(), System.currentTimeMillis() + (1000 * 5));
+                Utils.sendSyncMessage(player, "&cYou have not played enough to enter this portal!");
             }
             e.setCancelled(true);
         }

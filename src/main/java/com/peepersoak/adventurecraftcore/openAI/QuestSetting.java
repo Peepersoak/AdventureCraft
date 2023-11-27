@@ -12,6 +12,7 @@ public class QuestSetting {
     private final int fabledDuration;
     private final int godlikeDuration;
     private final int ascendedDuration;
+    private final int questFrequency;
 
 
 
@@ -28,6 +29,7 @@ public class QuestSetting {
         fabledDuration = config.getInt(durationPath + "Fabled");
         godlikeDuration = config.getInt(durationPath + "Godlike");
         ascendedDuration = config.getInt(durationPath + "Ascended");
+        questFrequency = config.getInt(startingPath + "Frequency");
     }
 
     public int getCommonDuration() {
@@ -64,5 +66,9 @@ public class QuestSetting {
 
     public int getAscendedDuration() {
         return ascendedDuration;
+    }
+
+    public int getQuestFrequency() {
+        return questFrequency;
     }
 }

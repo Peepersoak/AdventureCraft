@@ -2,6 +2,7 @@ package com.peepersoak.adventurecraftcore.openAI;
 
 import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.utils.Utils;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -27,10 +28,13 @@ public class QuestData {
     private final int rewardMoney;
     private final int rewardExperience;
     private final int totalDuration;
+    private final int totalObjectiveCount;
     private final List<String> rewardRegularItem;
     private final CustomItem rewardCustomItem;
     private final UUID questUUID;
     private final UUID playerUUID;
+    private final List<UUID> playerWhoTookThisQuestAlready = new ArrayList<>();
+
 
     public QuestData(String questRank,
                      String questName,
@@ -54,6 +58,7 @@ public class QuestData {
         this.rewardMoney = rewardMoney;
         this.rewardExperience = rewardExperience;
         this.listOfObjectives = listOfObjectives;
+        this.totalObjectiveCount = listOfObjectives.size();
         this.rewardCustomItem = rewardCustomItem;
         this.rewardRegularItem = rewardRegularItem;
         this.isActive = isActive;
@@ -64,15 +69,14 @@ public class QuestData {
         updateDuration();
     }
     private int duration = 0;
-
     // This means the player is actively doing the quest, if this is false, which is by default, the plugin will not track the progress
     private boolean isActive;
-
     // This is the status for when the quest is done
     private boolean isDone = false;
     // If the quest duration is zero the quest will expire and should not be able to activate
     private boolean isExpired = false;
-
+    private boolean stopUpdating = false;
+    private boolean isBoardQuest;
     // This is the active objective
     private Objective activeObjective = null;
 
@@ -91,103 +95,17 @@ public class QuestData {
         lore.add("");
 
         // Like is it the first objective, second or third
-        int objectiveCount = 0;
-        int totalObjectives = listOfObjectives.size();
-
-        boolean hasFound = false;
-
         // List the objective number
+        int doneTask = 1;
         for (Objective objective : listOfObjectives.values()) {
-            objectiveCount++;
-            if (objective.getCount() > 0) {
-                lore.add(Utils.color("&3Objective Details ("+ objectiveCount + "/" + totalObjectives + ")" ));
-                hasFound = true;
-                break;
+            if (objective.getCount() >= objective.getTotalCount()) {
+                doneTask++;
             }
         }
+        lore.add(Utils.color("&3Objective Details ("+ doneTask + "/" + totalObjectiveCount + ")" ));
 
-        if (!hasFound) {
-            lore.add(Utils.color("&3Objective Details ("+ objectiveCount + "/" + totalObjectives + ")" ));
-        }
+        getObjectiveDetails(lore);
 
-        Objective objective = activeObjective;
-
-        String title = objective.getTitle();
-        String objectiveType = objective.getObjective();
-
-        lore.add(Utils.color("&d◆ " + title));
-        lore.add(Utils.color("&b➤ &7Action: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(objectiveType))));
-
-        if (objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_BREAK) || objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_PLACE)) {
-            String material = objective.getMaterial();
-            lore.add(Utils.color("&b➤ &7Block: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(material))));
-        } else if (objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_CRAFT)) {
-            String material = objective.getMaterial();
-            lore.add(Utils.color("&b➤ &7Item: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(material))));
-        } else if (objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_WALK) || objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_FLY)) {
-            String sampleData = "";
-        } else if (objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_KILL)) {
-            String entityType = objective.getEntityType();
-            String materialToUse = objective.getMaterial();
-            lore.add(Utils.color("&b➤ &7Entity: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(entityType))));
-            lore.add(Utils.color("&b➤ &7Using: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(materialToUse))));
-        } else if (objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_HARVEST) || objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_PLANT)) {
-            String material = objective.getMaterial();
-            lore.add(Utils.color("&b➤ &7Crops: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(material))));
-        } else if (objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
-            int level = objective.getLevel();
-            String material = objective.getMaterial();
-            String enchantment = objective.getEnchantment();
-            lore.add(Utils.color("&b➤ &7Item: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(material))));
-            lore.add(Utils.color("&b➤ &7Enchantment: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(enchantment))));
-            lore.add(Utils.color("&b➤ &7Enchantment Level: &3" + level));
-        }
-
-        String biome = objective.getBiome();
-        if (biome != null) {
-            lore.add(Utils.color("&b➤ &7Biome: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(biome))));
-        }
-
-        String world = objective.getWorld();
-        if (world != null) {
-            lore.add(Utils.color("&b➤ &7World: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(world))));
-        }
-
-        int minY = objective.getStartY();
-        int maxY = objective.getEndY();
-        if (minY != -300 && maxY != -300) {
-            // Check Y Coordinate
-            lore.add(Utils.color("&b➤ &7Between &3" + minY + "y&7 and &3" + maxY + "y"));
-        }
-
-        // Check the time
-        int minTime = objective.getTimeStart();
-        int maxTime = objective.getTimeEnd();
-        if (minTime != -1 && maxTime != -1) {
-            lore.add(Utils.color("&b➤ &7Between the time of &3" + minTime + "&7 and &3" + maxTime + "&7"));
-        }
-
-        // Assign the current active objective to the meta
-        int count = objective.getCount();
-        if (objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_BREAK)) {
-            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Blocks Remaining"));
-        } else if (objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_CRAFT)) {
-            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Item Remaining"));
-            lore.add(Utils.color("&b➤ &7Using: &6Crafting Table"));
-        } else if (objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_WALK)) {
-            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Seconds Remaining"));
-        } else if (objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_FLY)) {
-            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Seconds Remaining"));
-        } else if (objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_KILL)) {
-            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Kills Remaining"));
-        } else if (objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_HARVEST) || objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_PLANT)) {
-            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Crops Remaining"));
-        } else if (objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT)) {
-            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Enchants Remaining"));
-        }
-        lore.add("");
-
-        lore.add(Utils.color("&3Quest Rank: " + questRank));
         lore.add("");
         lore.add(Utils.color("&bRewards"));
         lore.add(Utils.color("&b➤ &7Money: &6" + rewardMoney));
@@ -247,6 +165,7 @@ public class QuestData {
             System.out.println("DONE");
             assignAnActiveObjective(player);
         }
+
     }
     // Update Walk
     public void updateQuest() {
@@ -333,12 +252,11 @@ public class QuestData {
             assignAnActiveObjective(player);
         }
     }
-
     public void updateDuration() {
         new BukkitRunnable() {
             @Override
             public void run() {
-                if (isDone) {
+                if (isDone || stopUpdating) {
                     this.cancel();
                     return;
                 }
@@ -353,19 +271,24 @@ public class QuestData {
                             player.sendMessage(Utils.color("&b" + questName + " &chas expired!"));
                         }
                     });
-                    AdventureCraftCore.getInstance().getOnGoingQuest().removeQuest(playerUUID, questUUID, false);
+                    if (isBoardQuest) {
+                        AdventureCraftCore.getInstance().getQuestManager().removeQuestFromTodays(questUUID);
+                    } else {
+                        AdventureCraftCore.getInstance().getOnGoingQuest().removeQuest(playerUUID, questUUID, false);
+                    }
                     this.cancel();
                     return;
                 }
                 duration--;
+                activeObjective.updateBossBarName(duration);
             }
         }.runTaskTimerAsynchronously(AdventureCraftCore.getInstance(), 20, 20);
     }
-
     public void activateQuest(Player player) {
         if (isActive) {
             isActive = false;
             player.sendMessage(Utils.color("&b" + questName + " &chas been de-activated!"));
+            assignPermission(player, false);
             return;
         }
         isActive = true;
@@ -429,8 +352,9 @@ public class QuestData {
     public boolean isDone() {
         return isDone;
     }
-
     public void assignPermission(Player player, boolean assign) {
+        clearPermission(player);
+
         String type = activeObjective.getObjective();
         String permission = null;
 
@@ -456,21 +380,38 @@ public class QuestData {
             permission = ObjectiveStrings.FISHIN_QUEST_PERMISSION;
         }
 
-        if (permission != null) player.addAttachment(AdventureCraftCore.getInstance(), permission, assign);
+        if (permission != null) {
+            player.addAttachment(AdventureCraftCore.getInstance(), permission, assign);
+            activeObjective.assignObjective(player);
+        }
+
+        if (assign) {
+            activeObjective.assignObjective(player);
+        } else {
+            activeObjective.removeObjective();
+        }
+    }
+    private void clearPermission(Player player) {
+        player.addAttachment(AdventureCraftCore.getInstance(), ObjectiveStrings.BREAK_QUEST_PERMISSION, false);
+        player.addAttachment(AdventureCraftCore.getInstance(), ObjectiveStrings.PLACE_QUEST_PERMISSION, false);
+        player.addAttachment(AdventureCraftCore.getInstance(), ObjectiveStrings.WALK_QUEST_PERMISSION, false);
+        player.addAttachment(AdventureCraftCore.getInstance(), ObjectiveStrings.FLY_QUEST_PERMISSION, false);
+        player.addAttachment(AdventureCraftCore.getInstance(), ObjectiveStrings.KILL_QUEST_PERMISSION, false);
+        player.addAttachment(AdventureCraftCore.getInstance(), ObjectiveStrings.HARVEST_QUEST_PERMISSION, false);
+        player.addAttachment(AdventureCraftCore.getInstance(), ObjectiveStrings.PLANT_QUEST_PERMISSION, false);
+        player.addAttachment(AdventureCraftCore.getInstance(), ObjectiveStrings.CRAFT_QUEST_PERMISSION, false);
+        player.addAttachment(AdventureCraftCore.getInstance(), ObjectiveStrings.ENCHANT_QUEST_PERMISSION, false);
+        player.addAttachment(AdventureCraftCore.getInstance(), ObjectiveStrings.FISHIN_QUEST_PERMISSION, false);
     }
     private void assignAnActiveObjective(Player player) {
         Objective oldObjective = null;
         for (String objectiveType : AdventureCraftCore.getInstance().getQuestListChecker().getObjectiveList()) {
-            System.out.println(objectiveType);
-
             for (Objective objective : listOfObjectives.values()) {
-                System.out.println(objective.getTitle() + " " + objective.getObjective());
                 if (!objectiveType.equalsIgnoreCase(objective.getObjective())) continue;
-                if (objective.getCount() <= 0) {
+                if (objective.getCount() >= objective.getTotalCount()) {
                     oldObjective = objective;
                     continue;
                 }
-                System.out.println("ASIGNING " + objective.getTitle() + " "  + objective.getObjective());
                 activeObjective = objective;
                 if (isActive && player != null && player.isOnline()) {
                     assignPermission(player, true);
@@ -516,8 +457,11 @@ public class QuestData {
         }
 
         if (rewardMoney > 0) {
-            AdventureCraftCore.getEconomy().depositPlayer(player, rewardMoney);
-            player.sendMessage(Utils.color("&b" + rewardMoney + " money &ehas been received"));
+            Economy economy = AdventureCraftCore.getInstance().getEconomy();
+            if (economy != null) {
+                economy.depositPlayer(player, rewardMoney);
+                player.sendMessage(Utils.color("&b" + rewardMoney + " money &ehas been received"));
+            }
         }
 
         // Remove the quest
@@ -532,9 +476,97 @@ public class QuestData {
         }
     }
 
+    public void shouldStopUpdating() {
+        stopUpdating = true;
+    }
+
+    private void getObjectiveDetails(List<String> lore) {
+        String objectiveType = activeObjective.getObjective();
+
+        lore.add(Utils.color("&d◆ " + activeObjective.getTitle()));
+        lore.add(Utils.color("&b➤ &7Action: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(objectiveType))));
+
+        boolean isBreak = objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_BREAK);
+        boolean isPlace = objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_PLACE);
+        boolean isCraft = objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_CRAFT);
+        boolean isWalk = objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_WALK);
+        boolean isFly = objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_FLY);
+        boolean isKill = objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_KILL);
+        boolean isHarvest = objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_HARVEST);
+        boolean isPlant = objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_PLANT);
+        boolean isEnchant = objectiveType.equalsIgnoreCase(ObjectiveStrings.TYPE_ENCHANT);
+
+        if (isBreak || isPlace) {
+            String material = activeObjective.getMaterial();
+            lore.add(Utils.color("&b➤ &7Block: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(material))));
+        } else if (isCraft) {
+            String material = activeObjective.getMaterial();
+            lore.add(Utils.color("&b➤ &7Item: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(material))));
+        } else if (isWalk || isFly) {
+            String sampleData = "";
+        } else if (isKill) {
+            String entityType = activeObjective.getEntityType();
+            String materialToUse = activeObjective.getMaterial();
+            lore.add(Utils.color("&b➤ &7Entity: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(entityType))));
+            lore.add(Utils.color("&b➤ &7Using: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(materialToUse))));
+        } else if (isHarvest || isPlant) {
+            String material = activeObjective.getMaterial();
+            lore.add(Utils.color("&b➤ &7Crops: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(material))));
+        } else if (isEnchant) {
+            int level = activeObjective.getLevel();
+            String material = activeObjective.getMaterial();
+            String enchantment = activeObjective.getEnchantment();
+            lore.add(Utils.color("&b➤ &7Item: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(material))));
+            lore.add(Utils.color("&b➤ &7Enchantment: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(enchantment))));
+            lore.add(Utils.color("&b➤ &7Enchantment Level: &3" + level));
+        }
+        String biome = activeObjective.getBiome();
+        if (biome != null) {
+            lore.add(Utils.color("&b➤ &7Biome: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(biome))));
+        }
+        String world = activeObjective.getWorld();
+        if (world != null) {
+            lore.add(Utils.color("&b➤ &7World: &3" + Utils.capitalizeFirstLetter(Utils.cleanString(world))));
+        }
+        int minY = activeObjective.getStartY();
+        int maxY = activeObjective.getEndY();
+        if (minY != -300 && maxY != -300) {
+            // Check Y Coordinate
+            lore.add(Utils.color("&b➤ &7Between &3" + minY + "y&7 and &3" + maxY + "y"));
+        }
+        // Check the time
+        int minTime = activeObjective.getTimeStart();
+        int maxTime = activeObjective.getTimeEnd();
+        if (minTime != -1 && maxTime != -1) {
+            lore.add(Utils.color("&b➤ &7Between the time of &3" + minTime + "&7 and &3" + maxTime + "&7"));
+        }
+        // Assign the current active objective to the meta
+        int count = activeObjective.getTotalCount();
+        if (isBreak) {
+            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Blocks"));
+        } else if (isCraft) {
+            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Item"));
+            lore.add(Utils.color("&b➤ &7Using: &6Crafting Table"));
+        } else if (isWalk) {
+            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Seconds"));
+        } else if (isFly) {
+            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Seconds"));
+        } else if (isKill) {
+            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Kills"));
+        } else if (isHarvest || isPlant) {
+            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Crops"));
+        } else if (isEnchant) {
+            lore.add(Utils.color("&b➤ &7Goal: &6" + count + " &3Enchants"));
+        }
+
+        int currentProgress = activeObjective.getCount();
+        lore.add(Utils.color("&b➤ &7Progress: &6" + currentProgress));
+        lore.add("");
+        lore.add(Utils.color("&3Quest Rank: " + questRank));
+    }
     private boolean passAllOptionalRequirement(Player player, Objective objective) {
         // Check if quest is not active, is done, has expired, or if the last objective has been completed
-        if (!isActive || isDone || isExpired || objective.getCount() <= 0) return false;
+        if (!isActive || isDone || isExpired || objective.getCount() >= objective.getTotalCount()) return false;
 
         // Check the world
         String worldRequirement = objective.getWorld();
@@ -585,5 +617,14 @@ public class QuestData {
         }
 
         return true;
+    }
+    public void addPlayerToListOfPlayer(Player player) {
+        playerWhoTookThisQuestAlready.add(player.getUniqueId());
+    }
+    public boolean isDoingQuestAlready(UUID playerUUID) {
+        return playerWhoTookThisQuestAlready.contains(playerUUID);
+    }
+    public void setAsBoardQuest() {
+        isBoardQuest = true;
     }
 }

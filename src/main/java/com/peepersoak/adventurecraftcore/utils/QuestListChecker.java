@@ -9,7 +9,6 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.trim.ArmorTrim;
 import org.bukkit.inventory.meta.trim.TrimMaterial;
 import org.bukkit.inventory.meta.trim.TrimPattern;
 
@@ -36,6 +35,7 @@ public class QuestListChecker {
     private final HashMap<Enchantment, Integer> enchantmentMaxLevel = new HashMap<>();
     private final HashMap<String, TrimMaterial> trimMaterials = new HashMap<>();
     private final HashMap<String, TrimPattern> trimPatterns = new HashMap<>();
+    private final HashMap<String, Double> ranks = new HashMap<>();
 
     public QuestListChecker() {
         setHarvestable();
@@ -50,8 +50,20 @@ public class QuestListChecker {
         setObjectiveList();
         setMythologies();
         setBiomes();
+        setRanks();
     }
 
+    private void setRanks() {
+        ranks.put(ObjectiveStrings.COMMON, 20.0);
+        ranks.put(ObjectiveStrings.UNCOMMON, 18.0);
+        ranks.put(ObjectiveStrings.RARE, 15.0);
+        ranks.put(ObjectiveStrings.EPIC, 4.0);
+        ranks.put(ObjectiveStrings.LEGENDARY, 1.0);
+        ranks.put(ObjectiveStrings.MYTHICAL, 0.2);
+        ranks.put(ObjectiveStrings.FABLED, 0.03);
+        ranks.put(ObjectiveStrings.GODLIKE, 0.005);
+        ranks.put(ObjectiveStrings.ASCENDED, 0.001);
+    }
     private void setHarvestable() {
         harvestable.put(Material.CARROTS, 14.3);
         harvestable.put(Material.POTATOES, 14.3);
@@ -230,14 +242,14 @@ public class QuestListChecker {
         weapons.add(Material.BOW);
     }
     private void setObjectiveList() {
+        objectiveList.add(ObjectiveStrings.TYPE_FLY);
+        objectiveList.add(ObjectiveStrings.TYPE_WALK);
         objectiveList.add(ObjectiveStrings.TYPE_BREAK);
         objectiveList.add(ObjectiveStrings.TYPE_HARVEST);
         objectiveList.add(ObjectiveStrings.TYPE_FISHING);
         objectiveList.add(ObjectiveStrings.TYPE_KILL);
 //        objectiveList.add(ObjectiveStrings.TYPE_PLANT);
 //        objectiveList.add(ObjectiveStrings.TYPE_PLACE);
-        objectiveList.add(ObjectiveStrings.TYPE_FLY);
-        objectiveList.add(ObjectiveStrings.TYPE_WALK);
         objectiveList.add(ObjectiveStrings.TYPE_CRAFT);
         objectiveList.add(ObjectiveStrings.TYPE_ENCHANT);
     }
@@ -347,5 +359,7 @@ public class QuestListChecker {
     public String getRandomMythologies() {
         return (String) Utils.getRanomObject(mythologies);
     }
-
+    public HashMap<String, Double> getRanks() {
+        return ranks;
+    }
 }

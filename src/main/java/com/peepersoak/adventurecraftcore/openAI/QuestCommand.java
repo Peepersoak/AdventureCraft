@@ -7,6 +7,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -17,46 +18,28 @@ import java.util.List;
 public class QuestCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-
-        Player target;
-
         if (sender instanceof Player player) {
-            target = player;
-        } else {
-            target = null;
-        }
-
-        if (args.length > 0) {
-            String cmd = args[0];
-            if (cmd.equalsIgnoreCase("open")) {
-                if (target == null) {
-                    System.out.println("Target is false");
-                    return false;
-                }
-                keepUpdatingQuestWindow(target);
-                return false;
+            OnGoingQuest onGoingQuest = AdventureCraftCore.getInstance().getOnGoingQuest();
+            List<QuestData> questList = onGoingQuest.getAllQuest(player.getUniqueId());
+            if (questList == null) {
+                questList = new ArrayList<>();
             }
-        }
-
-        if (target != null) {
-            String cmd = String.join(" ", args);
-            Bukkit.getScheduler().runTaskAsynchronously(AdventureCraftCore.getInstance(), () -> {
-                AdventureCraftCore.getInstance().getOnGoingQuest().createANewQuest(target, cmd);
-            });
+            Inventory inv = Bukkit.createInventory(null, InventoryType.HOPPER, ObjectiveStrings.QUEST_PERSONAL_BOARD);
+            keepUpdatingQuestWindow(player, questList, inv);
+        } else {
+            String player = args[0];
+            Player target = Bukkit.getPlayer(player);
+            if (target == null || !target.isOnline()) return false;
+            QuestManager manager = AdventureCraftCore.getInstance().getQuestManager();
+            List<QuestData> questDataList = new ArrayList<>(manager.getTodaysAvailableQuest().values());
+            Inventory inv = Bukkit.createInventory(null, 54, ObjectiveStrings.QUEST_ADVENTURECRAFT_BOARD);
+            keepUpdatingQuestWindow(target, questDataList, inv);
         }
         return false;
     }
 
-    private void keepUpdatingQuestWindow(Player player) {
-        OnGoingQuest onGoingQuest = AdventureCraftCore.getInstance().getOnGoingQuest();
-
-        List<QuestData> questList = onGoingQuest.getAllQuest(player.getUniqueId());
-        if (questList == null || questList.isEmpty()) {
-            System.out.println("Quest is empty");
-            return;
-        }
-        final Inventory inv = Bukkit.createInventory(null, 54, ObjectiveStrings.QUEST_INVENTORY_NAME);
-        setQuestItems(inv, questList);
+    private void keepUpdatingQuestWindow(Player player, List<QuestData> questDataList, Inventory inv) {
+        setQuestItems(inv, questDataList, inv.getSize());
         player.openInventory(inv);
         new BukkitRunnable() {
             @Override
@@ -66,19 +49,18 @@ public class QuestCommand implements CommandExecutor {
                     this.cancel();
                     return;
                 }
-                setQuestItems(inv, questList);
+                setQuestItems(inv, questDataList, inv.getSize());
             }
         }.runTaskTimer(AdventureCraftCore.getInstance(), 0, 20);
     }
 
-    private void setQuestItems(Inventory inventory, List<QuestData> questList) {
+    private void setQuestItems(Inventory inventory, List<QuestData> questList, int total) {
         List<ItemStack> questPaper = new ArrayList<>();
-        for (QuestData quest : questList) {
-            ItemStack paper = quest.createPaperQuest();
-            questPaper.add(paper);
-            if (quest.getRewardCustomItem() != null && quest.getRewardCustomItem().getRewards() != null) {
-                ItemStack item = quest.getRewardCustomItem().getRewards();
-                questPaper.add(item);
+        if (questList != null && !questList.isEmpty())  {
+            for (int i = 0; i < questList.size() && i < total; i++) {
+                QuestData data = questList.get(i);
+                ItemStack paper = data.createPaperQuest();
+                questPaper.add(paper);
             }
         }
         inventory.setContents(questPaper.toArray(new ItemStack[0]));

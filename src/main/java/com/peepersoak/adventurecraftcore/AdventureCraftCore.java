@@ -11,6 +11,7 @@ import com.peepersoak.adventurecraftcore.enchantment.store.OpenStore;
 import com.peepersoak.adventurecraftcore.openAI.*;
 import com.peepersoak.adventurecraftcore.utils.*;
 import com.peepersoak.adventurecraftcore.world.AntiAFK;
+import com.sk89q.worldguard.WorldGuard;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -22,13 +23,16 @@ import java.util.List;
 import java.util.Objects;
 
 public final class AdventureCraftCore extends JavaPlugin {
-    private static Economy econ = null;
+    private Economy econ = null;
     private static AdventureCraftCore instance;
     private final EventHandler eventHandler = new EventHandler();
     private final CraftingHandler craftingHandler = new CraftingHandler();
     private final Nightmare nightmare = new Nightmare();
     private QuestListChecker questListChecker;
+    // This will handle all personal quest
     private OnGoingQuest onGoingQuest;
+    // This will handle all guild quest
+    private QuestManager questManager;
     private OpenStore openStore;
     private DungeonEvents dungeonEvents;
     private Data dungeonSetting;
@@ -52,6 +56,9 @@ public final class AdventureCraftCore extends JavaPlugin {
 
         // Load all quest here
         onGoingQuest = new OnGoingQuest();
+        questManager = new QuestManager();
+
+        Objects.requireNonNull(getCommand("acreload")).setExecutor(new ReloadCommand());
 
         Objects.requireNonNull(getCommand("open")).setExecutor(new OpenInventory());
         Objects.requireNonNull(getCommand("scroll")).setExecutor(new Scroll());
@@ -90,18 +97,24 @@ public final class AdventureCraftCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("margrave")).setExecutor(openStore);
         Bukkit.getPluginManager().registerEvents(openStore, this);
 
-        if (!setupEconomy()) getServer().getPluginManager().disablePlugin(this);
+        setupEconomy();
     }
 
     @Override
     public void onLoad() {
-        new WorldFlags();
+        try {
+            new WorldFlags();
+        } catch (NoClassDefFoundError e) {
+            getLogger().warning("WorldGuard not found! All WorldGuard flags will be disabled.");
+        }
     }
 
     @Override
     public void onDisable() {
         onGoingQuest.saveData();
-        dungeonEvents.removeAllEntities();
+        if (dungeonEvents != null) {
+            dungeonEvents.removeAllEntities();
+        }
     }
 
     public void loadYMLFiles() {
@@ -141,29 +154,38 @@ public final class AdventureCraftCore extends JavaPlugin {
         }
     }
 
-    private boolean setupEconomy() {
+    private void setupEconomy() {
         if (getServer().getPluginManager().getPlugin("Vault") == null) {
-            return false;
+            getLogger().warning("Vault not found! Economy will not be registered!");
+            return;
         }
         RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
         if (rsp == null) {
-            return false;
+            return;
         }
         econ = rsp.getProvider();
-        return econ != null;
     }
 
-    public static Economy getEconomy() {
+    public Economy getEconomy() {
         return econ;
     }
     public OpenAI getOpenai() { return openai; }
     public OnGoingQuest getOnGoingQuest() {
         return onGoingQuest;
     }
+    public QuestManager getQuestManager() {
+        return questManager;
+    }
     public QuestListChecker getQuestListChecker() {
         return questListChecker;
     }
     public QuestSetting getQuestSetting() {
         return questSetting;
+    }
+
+    public void generalReload() {
+        this.reloadConfig();
+        onGoingQuest.saveData();
+        onGoingQuest.restoreQuest();
     }
 }

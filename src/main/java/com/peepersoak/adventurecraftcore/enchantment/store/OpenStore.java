@@ -4,6 +4,7 @@ import com.peepersoak.adventurecraftcore.AdventureCraftCore;
 import com.peepersoak.adventurecraftcore.enchantment.Enchantments;
 import com.peepersoak.adventurecraftcore.enchantment.ItemFactory;
 import com.peepersoak.adventurecraftcore.utils.Utils;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -103,14 +104,17 @@ public class OpenStore implements CommandExecutor, Listener {
         if (!(e.getWhoClicked() instanceof Player player)) return;
         e.setCancelled(true);
 
-        double balance = AdventureCraftCore.getEconomy().getBalance(player);
+        Economy economy = AdventureCraftCore.getInstance().getEconomy();
+        if (economy == null) return;
+
+        double balance = economy.getBalance(player);
         double cost = dealCost.get(player.getUniqueId());
         if (balance < cost) {
             player.sendMessage(Utils.color("&cYou don't have enough money! &4Don't come back again if you don't have money!!"));
             player.closeInventory();
             clearDeal(player);
         } else {
-            AdventureCraftCore.getEconomy().withdrawPlayer(player, cost);
+            economy.withdrawPlayer(player, cost);
             player.sendMessage(Utils.color("&b$" + cost + " &6has been deducted from your balance."));
 
             String enchantName = enchantment.get(player.getUniqueId()).getKey().getKey().toUpperCase();
